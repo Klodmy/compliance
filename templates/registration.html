@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GC Registration</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 40px; }
+        h2 { margin-bottom: 20px; }
+        form { max-width: 400px; }
+        input {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #0e76a8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Register as General Contractor</h2>
+
+    <form method="post">
+        <input
+            type="text"
+            name="login"
+            placeholder="Username"
+            required
+            minlength="4"
+            maxlength="20"
+            pattern="[a-zA-Z0-9]+"
+            title="4-20 characters, letters and numbers only"
+        >
+
+        <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            required
+        >
+
+        <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            required
+            minlength="6"
+            title="Minimum 6 characters"
+        >
+
+        <input
+            type="password"
+            name="password2"
+            placeholder="Confirm Password"
+            required
+            minlength="6"
+            title="Must match the password above"
+        >
+
+        <button type="submit">Register</button>
+    </form>
+
+</body>
+</html>

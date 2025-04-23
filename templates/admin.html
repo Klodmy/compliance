@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 40px; }
+        h2 { margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        form input, form select { margin-bottom: 10px; padding: 6px; width: 300px; }
+        button { padding: 8px 20px; }
+    </style>
+</head>
+<body>
+
+    <h2>Hello, {{ user['login'] }} (GC)</h2>
+
+    <h3>Your Subcontractors</h3>
+    {% if subs %}
+    <table>
+        <tr>
+            <th>Login</th>
+            <th>Email</th>
+            <th>Token</th>
+            <th>Actions</th>
+        </tr>
+        {% for sub in subs %}
+        <tr>
+            <td>{{ sub['login'] }}</td>
+            <td>{{ sub['email'] }}</td>
+            <td>{{ sub['token'] }}</td>
+            <td><form method="post" action="/delete_sub">
+                <input type="hidden" name="token" value="{{ sub['token'] }}">
+                <button type="submit">Delete</button>
+            </form></td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+        <p>No subcontractors yet.</p>
+    {% endif %}
+
+    <h3>Add New Subcontractor</h3>
+    <form method="post">
+        <input type="text" name="new_login" placeholder="Subcontractor login" required><br>
+        <input type="password" name="new_password" placeholder="Password" required><br>
+        <input type="email" name="email" placeholder="Email" required><br>
+
+        <label>Select requirement set:</label><br>
+        <select name="requirement_set" required>
+            {% if req_sets %}
+                {% for rs in req_sets %}
+                    <option value="{{ rs['id'] }}">{{ rs['name'] }}</option>
+                {% endfor %}
+            {% else %}
+                <option value="1">Standard Set</option>
+            {% endif %}
+        </select><br><br>
+
+        <button type="submit">Add Subcontractor</button>
+    </form>
+
+</body>
+</html>

@@ -60,6 +60,8 @@ def login():
     # renders login page
     return render_template("login.html")
 
+
+# registration
 @app.route("/registration", methods=['GET', 'POST'])
 def registration():
 
@@ -89,7 +91,7 @@ def registration():
     # rendering registration page       
     return render_template("registration.html")
 
-
+# main operational page for gc
 @app.route("/admin", methods=['GET', 'POST'])
 def admin():
 
@@ -122,20 +124,22 @@ def admin():
 
     return render_template("admin.html", user=user, subs=subs, req_sets=req_sets)
 
-
+# removes sub from the db when "delete" button is hit
 @app.route("/delete_sub", methods=['POST'])
 def delete_user():
-
+    # call db
     db = get_db()
+    # gets user's token
     token = request.form.get("token")
 
+    # if got, deletes this user from the db
     if token:
         db.execute("DELETE FROM users WHERE token = ? and role = 'sub'", (token, ))
         db.commit()
         return redirect("/admin")
 
 
-
+# page for the submission of the documents by the sub
 @app.route("/submission/<token>", methods=['GET', 'POST'])
 def submission(token):
 
@@ -179,3 +183,65 @@ def submission(token):
         
 
     return render_template("submission.html", user=submitting_user)
+
+
+# sets management
+@app.route("/my_sets", methods=['GET', 'POST'])
+def my_sets():
+
+    db = get_db()
+
+    # gets current user id
+    user_id = session["id"]
+
+    if request.method == "POST":
+
+        requirement_set = request.form.get("new_set_name")
+
+        db.execute("INSERT INTO requirement_sets (gc_id, name) VALUES (?, ?)", (user_id, requirement_set))
+        db.commit()
+
+    
+    # gets all doc sets this user has
+    doc_sets = db.execute("SELECT id, name FROM requirement_sets WHERE gc_id = ?", (user_id, )).fetchall()
+
+    # loops through requirement sets and gets docs in them and adds to the dict
+    docs_by_set = {}
+
+    for doc_set in doc_sets:
+        set_id = doc_set["id"]
+        docs = db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (set_id,)).fetchall()
+        docs_by_set[set_id] = docs
+
+    return render_template("my_sets.html", doc_sets=doc_sets, docs_by_set=docs_by_set)
+        
+
+@app.route("/my_sets/<set_id>", methods=['GET', 'POST'])
+def edit_set(set_id):
+
+    db = get_db()
+    current_set = [doc["doc_type"] for doc in db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (set_id,)).fetchall()]
+    # list of allowed docs
+    all_docs = ["WSIB", "COI", "Training", "Form 1000", "Other"]
+
+    if request.method == "POST":
+
+        # deletes previous required docs if any
+        db.execute("DELETE FROM requirements WHERE set_id = ?", (set_id,))
+
+        selected = []
+        
+        # looping through all possible docs, if it is selected adds it to this set
+        for doc in all_docs:
+            if request.form.get(doc):
+                selected.append(doc)
+
+        # inserting chosen docs in the set db
+        for selected_doc in selected:
+            db.execute("INSERT INTO requirements (set_id, doc_type) VALUES (?, ?)", (set_id, selected_doc))
+        
+        # push collected to db
+        db.commit()
+        return redirect("/my_sets")
+
+    return render_template("edit.html", current_set=current_set)

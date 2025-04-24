@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Requirement Set</title>
+</head>
+<body>
+    
+    <nav style="background-color: #f0f0f0; padding: 10px;">
+        <a href="/admin" style="margin-right: 15px;">Dashboard</a>
+        <a href="/my_sets" style="margin-right: 15px;">My Requirement Sets</a>
+        <a href="/logout">Log Out</a>
+    </nav>
+
+
+    <h1>Edit Requirement Set</h1>
+
+    <form method="post">
+        <p>Select the documents required for this set:</p>
+
+        {% for doc in ["WSIB", "COI", "Training", "Form 1000", "Other"] %}
+            <label>
+                <input type="checkbox" name="{{ doc }}" {% if doc in current_set %}checked{% endif %}>
+                {{ doc }}
+            </label><br>
+        {% endfor %}
+
+        <br>
+        <button type="submit">Save Changes</button>
+    </form>
+
+    <br>
+    <a href="{{ url_for('my_sets') }}">
+        <button type="button">Back to My Sets</button>
+    </a>
+</body>
+</html>

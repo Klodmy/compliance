@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 40px; }
+        h2 { margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        form input, form select { margin-bottom: 10px; padding: 6px; width: 300px; }
+        button { padding: 8px 20px; }
+    </style>
+</head>
+
+
+<body>
+<h3>Your Subcontractors</h3>
+{% if subs %}
+<table>
+    <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Token</th>
+        <th>Actions</th>
+    </tr>
+    {% for sub in subs %}
+    <tr>
+        <td>{{ sub['login'] }}</td>
+        <td>{{ sub['email'] }}</td>
+        <td>{{ sub['token'] }}</td>
+        <td><form method="post" action="/delete_sub">
+            <input type="hidden" name="token" value="{{ sub['token'] }}">
+            <button type="submit">Delete</button>
+        </form></td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+    <p>No subcontractors yet.</p>
+{% endif %}
+
+</body>
+</html>

@@ -3,6 +3,7 @@ import sqlite3
 import uuid
 from utils import ex_check
 import os
+from random import randint
 
 
 app = Flask(__name__)
@@ -44,7 +45,7 @@ def login():
         form_password = request.form["password"]
 
         # getting user by login
-        user = db.execute("SELECT * FROM users WHERE login = ?", (form_login, )).fetchone()
+        user = db.execute("SELECT * FROM admin_users WHERE login = ?", (form_login, )).fetchone()
 
         # checking user's password, redirects to admin panel if ok
         if user and form_password == user["password"]:
@@ -75,6 +76,7 @@ def registration():
         password = request.form.get("password")
         password2 = request.form.get("password2")
         email = request.form.get("email")
+        name = request.form.get("name")
         token = str(uuid.uuid4())
 
         # check if all gethered and password confirmed
@@ -82,7 +84,7 @@ def registration():
             if password == password2:
                 
                 # create new user in db
-                db.execute("INSERT INTO users (login, password, token, role, email) VALUES (?, ?, ?, ?, ?)", (login, password, token, "gc", email))
+                db.execute("INSERT INTO admin_users (login, password, email, name) VALUES (?, ?, ?, ?)", (login, password, email, name))
                 db.commit()
 
                 # sands back to login
@@ -95,6 +97,7 @@ def registration():
 @app.route("/admin", methods=['GET', 'POST'])
 def admin():
 
+    # db call, gets admin's id
     db = get_db()
     user_id = session.get("id")
 
@@ -104,25 +107,42 @@ def admin():
 
     
     if request.method == "POST":
+        
+        # checks which form was submitted
+        submitted_form = request.form.get("submitted_form")
 
-        # getting data from the form
-        new_login = request.form.get("new_login")
-        new_password = request.form.get("new_password")
-        new_token = str(uuid.uuid4())
-        email = request.form.get("email")
-        # dropdown, select from created ones, if none - proposes standard
-        requirement_set = request.form.get("requirement_set")
+        # adds new project
+        if submitted_form == "add_project":
 
-        # adding sub
-        db.execute("INSERT INTO users (login, password, token, created_by, email, requirement_set_id, role) VALUES (?, ?, ?, ?, ?, ?, ?)", (new_login, new_password, new_token, user_id, email, requirement_set, "sub"))
-        db.commit()
+            # creating new projects
+            project_number = request.form.get("projet_number")
+            project_name = request.form.get("project_name")
 
-    # creating a user 
-    user = db.execute("SELECT * FROM users WHERE id = ?", (session["id"],)).fetchone()
-    subs = db.execute("SELECT * FROM users WHERE created_by = ?", (session["id"],)).fetchall()
-    req_sets = db.execute("SELECT id, name FROM requirement_sets WHERE gc_id = ?", (user_id,)).fetchall()
+            # adding project to the db
+            db.execute("INSERT INTO projects (project_number, project_name, project_admin_id) VALUES (?, ?, ?)", (project_number, project_name, user_id))
+            db.commit()
 
-    return render_template("admin.html", user=user, subs=subs, req_sets=req_sets)
+
+        # adds new user
+        elif submitted_form == "add_submitter":
+        
+            # creating token and requesting new invited user's email
+            new_token = str(uuid.uuid4())
+            name = request.form.get("name")
+            email = request.form.get("email")
+
+
+            # adding new user dummy data
+            db.execute("INSERT INTO submitting_users (login, password, email, token, invited_by, name) VALUES (?, ?, ?, ?, ?, ?)", (str(randint(1, 1000)), str(randint(1, 1000)), new_token, user_id, email, name))
+            db.commit()
+
+
+    # getting admin, submitters, projects
+    user = db.execute("SELECT * FROM admin_users WHERE id = ?", (session["id"],)).fetchone()
+    subs = db.execute("SELECT * FROM submitting_users WHERE invited_by = ?", (session["id"],)).fetchall()
+    projects = db.execute("SELECT * FROM project WHERE project_admin_id = ?", (user_id,)).fetchall()
+
+    return render_template("admin.html", user=user, subs=subs, projects=projects)
 
 # removes sub from the db when "delete" button is hit
 @app.route("/delete_sub", methods=['POST'])

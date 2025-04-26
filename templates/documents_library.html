@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Documents Library</title>
+</head>
+<body>
+    <h1>Documents Library</h1>
+
+    <form method="POST">
+        <input type="text" name="doc_name" placeholder="Document Name" required>
+        <input type="text" name="doc_description" placeholder="Document Description" required>
+        <button type="submit">Add Document</button>
+    </form>
+
+    <h2>Your Documents</h2>
+    <ul>
+        {% for doc in docs %}
+            <li><strong>{{ doc.name }}</strong>: {{ doc.description }}</li>
+        {% else %}
+            <li>No documents yet.</li>
+        {% endfor %}
+    </ul>
+
+</body>
+</html>

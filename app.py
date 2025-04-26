@@ -22,10 +22,14 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+
+
 #main page
 @app.route("/", methods=['GET', 'POST'])
 def main():
     return redirect("/login")
+
+
 
 
 # handles login
@@ -62,6 +66,7 @@ def login():
     return render_template("login.html")
 
 
+
 # registration
 @app.route("/registration", methods=['GET', 'POST'])
 def registration():
@@ -93,6 +98,9 @@ def registration():
     # rendering registration page       
     return render_template("registration.html")
 
+
+
+
 # main operational page for gc
 @app.route("/admin", methods=['GET', 'POST'])
 def admin():
@@ -106,35 +114,8 @@ def admin():
         return redirect("/login")
 
     
-    if request.method == "POST":
-        
-        # checks which form was submitted
-        submitted_form = request.form.get("submitted_form")
-
-        # adds new project
-        if submitted_form == "add_project":
-
-            # creating new projects
-            project_number = request.form.get("projet_number")
-            project_name = request.form.get("project_name")
-
-            # adding project to the db
-            db.execute("INSERT INTO projects (project_number, project_name, project_admin_id) VALUES (?, ?, ?)", (project_number, project_name, user_id))
-            db.commit()
-
-
-        # adds new user
-        elif submitted_form == "add_submitter":
-        
-            # creating token and requesting new invited user's email
-            new_token = str(uuid.uuid4())
-            name = request.form.get("name")
-            email = request.form.get("email")
-
-
-            # adding new user dummy data
-            db.execute("INSERT INTO submitting_users (login, password, email, token, invited_by, name) VALUES (?, ?, ?, ?, ?, ?)", (str(randint(1, 1000)), str(randint(1, 1000)), new_token, user_id, email, name))
-            db.commit()
+    #if request.method == "POST":
+    
 
 
     # getting admin, submitters, projects
@@ -143,6 +124,9 @@ def admin():
     projects = db.execute("SELECT * FROM project WHERE project_admin_id = ?", (user_id,)).fetchall()
 
     return render_template("admin.html", user=user, subs=subs, projects=projects)
+
+
+
 
 # removes sub from the db when "delete" button is hit
 @app.route("/delete_sub", methods=['POST'])
@@ -157,6 +141,8 @@ def delete_user():
         db.execute("DELETE FROM users WHERE token = ? and role = 'sub'", (token, ))
         db.commit()
         return redirect("/admin")
+
+
 
 
 # page for the submission of the documents by the sub
@@ -201,8 +187,9 @@ def submission(token):
             
         db.commit()
         
-
     return render_template("submission.html", user=submitting_user)
+
+
 
 
 # sets management
@@ -234,7 +221,9 @@ def my_sets():
         docs_by_set[set_id] = docs
 
     return render_template("my_sets.html", doc_sets=doc_sets, docs_by_set=docs_by_set)
-        
+
+
+
 
 @app.route("/my_sets/<set_id>", methods=['GET', 'POST'])
 def edit_set(set_id):
@@ -265,3 +254,81 @@ def edit_set(set_id):
         return redirect("/my_sets")
 
     return render_template("edit.html", current_set=current_set)
+
+
+
+
+@app.route("/documents_library", methods=['GET', 'POST'])
+def documents_library():
+
+    # call db, get user id
+    db = get_db()
+    user_id = session.get("id")
+
+    if request.method == "POST":
+
+        # get doc name and description
+        doc_name = request.form.get("doc_name")
+        doc_description = request.form.get("doc_description")
+
+        # insert results into db
+        db.execute("INSERT INTO users_docs (name, description, user_id) VALUES (?, ?, ?)", (doc_name, doc_description, user_id))
+        db.commit()
+        
+        # redirects to updated page
+        return redirect("/documents_library")
+
+    # get existing docs to display
+    docs = db.execute("SELECT name, description FROM users_docs WHERE user_id  = ?", (user_id,)).fetchall()
+    return render_template("documents_library.html", docs=docs)
+
+
+
+@app.route("/projects", methods=['GET', 'POST'])
+def projects():
+    
+    # call db, get user id
+    db = get_db()
+    user_id = session.get("id")
+
+    if request.method == "POST":
+        
+        # get project number and name through the form
+        project_number = request.form.get("project_number")
+        project_name = request.form.get("project_name")
+
+        # add to the db
+        db.execute("INSERT INTO projects (project_number, project_name, project_admin_id) VALUES (?, ?, ?)", (project_number, project_name, user_id))
+        db.commit()
+
+        # refresh page
+        return redirect("/projects")
+    
+    # get existing projects
+    projects = db.execute("SELECT project_number, project_name FROM project WHERE project_admin_id = ?", (user_id,)).fetchall()
+    
+    return render_template("projects.html", projects=projects)
+
+@app.route("/add_submitter", methods=['GET', 'POST'])
+def add_submitter():
+
+    db = get_db()
+    user_id = session.get("id")
+
+    if request.method == "POST":
+
+        # creating token and requesting new invited user's email
+        new_token = str(uuid.uuid4())
+        name = request.form.get("name")
+        email = request.form.get("email")
+
+
+        # adding new user dummy data
+        db.execute("INSERT INTO submitting_users (login, password, email, token, invited_by, name) VALUES (?, ?, ?, ?, ?, ?)", (str(randint(1, 1000)), str(randint(1, 1000)), email, new_token, user_id, name))
+        db.commit()
+        return redirect("/add_submitter")
+    
+    # get existing submitters
+    submitters = db.execute("SELECT name, email FROM submitting_users WHERE invited_by = ?", (user_id,)).fetchall()
+
+    return render_template("add_submitter.html", submitters=submitters)

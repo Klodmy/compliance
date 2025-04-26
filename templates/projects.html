@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Projects</title>
+</head>
+<body>
+    <h1>Projects</h1>
+
+    <form method="POST">
+        <input type="text" name="project_number" placeholder="Project Number" required>
+        <input type="text" name="project_name" placeholder="Project Name" required>
+        <button type="submit">Add Project</button>
+    </form>
+
+    <h2>Your Projects</h2>
+    <ul>
+        {% for project in projects %}
+            <li><strong>{{ project.project_number }}</strong>: {{ project.project_name }}</li>
+        {% else %}
+            <li>No projects yet.</li>
+        {% endfor %}
+    </ul>
+
+</body>
+</html>

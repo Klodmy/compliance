@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Submitter</title>
+</head>
+<body>
+    <h1>Add a New Submitter</h1>
+
+    <form method="POST">
+        <input type="text" name="name" placeholder="Submitter Name" required>
+        <input type="email" name="email" placeholder="Submitter Email" required>
+        <button type="submit">Add Submitter</button>
+    </form>
+
+    <h2>Your Submitters</h2>
+    <ul>
+        {% for submitter in submitters %}
+            <li><strong>{{ submitter.name }}</strong> ({{ submitter.email }})</li>
+        {% else %}
+            <li>No submitters yet.</li>
+        {% endfor %}
+    </ul>
+
+</body>
+</html>

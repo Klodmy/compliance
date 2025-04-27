@@ -12,16 +12,15 @@
         <a href="/logout">Log Out</a>
     </nav>
 
-
     <h1>Edit Requirement Set</h1>
 
     <form method="post">
         <p>Select the documents required for this set:</p>
 
-        {% for doc in ["WSIB", "COI", "Training", "Form 1000", "Other"] %}
+        {% for doc in all_docs %}
             <label>
-                <input type="checkbox" name="{{ doc }}" {% if doc in current_set %}checked{% endif %}>
-                {{ doc }}
+                <input type="checkbox" name="{{ doc.name }}" {% if doc.name in current_set %}checked{% endif %}>
+                {{ doc.name }}
             </label><br>
         {% endfor %}
 
@@ -33,5 +32,6 @@
     <a href="{{ url_for('my_sets') }}">
         <button type="button">Back to My Sets</button>
     </a>
+
 </body>
 </html>

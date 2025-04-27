@@ -205,12 +205,12 @@ def my_sets():
 
         requirement_set = request.form.get("new_set_name")
 
-        db.execute("INSERT INTO requirement_sets (gc_id, name) VALUES (?, ?)", (user_id, requirement_set))
+        db.execute("INSERT INTO requirement_sets (admin_user_id, name) VALUES (?, ?)", (user_id, requirement_set))
         db.commit()
 
     
     # gets all doc sets this user has
-    doc_sets = db.execute("SELECT id, name FROM requirement_sets WHERE gc_id = ?", (user_id, )).fetchall()
+    doc_sets = db.execute("SELECT id, name FROM requirement_sets WHERE admin_user_id = ?", (user_id, )).fetchall()
 
     # loops through requirement sets and gets docs in them and adds to the dict
     docs_by_set = {}
@@ -229,9 +229,10 @@ def my_sets():
 def edit_set(set_id):
 
     db = get_db()
-    current_set = [doc["doc_type"] for doc in db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (set_id,)).fetchall()]
-    # list of allowed docs
-    all_docs = ["WSIB", "COI", "Training", "Form 1000", "Other"]
+    user_id = session.get("id")
+
+    # get docs created by user
+    all_docs = db.execute("SELECT * FROM users_docs WHERE user_id = ?", (user_id,)).fetchall()
 
     if request.method == "POST":
 
@@ -242,8 +243,8 @@ def edit_set(set_id):
         
         # looping through all possible docs, if it is selected adds it to this set
         for doc in all_docs:
-            if request.form.get(doc):
-                selected.append(doc)
+            if request.form.get(doc["name"]):
+                selected.append(doc["name"])
 
         # inserting chosen docs in the set db
         for selected_doc in selected:
@@ -252,8 +253,17 @@ def edit_set(set_id):
         # push collected to db
         db.commit()
         return redirect("/my_sets")
+    
+    
+    current_set = []
+    
+    this_set = db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (set_id,)).fetchall()
+    for doc in this_set:
+        current_set.append(doc["doc_type"])
 
-    return render_template("edit.html", current_set=current_set)
+    
+
+    return render_template("edit.html", current_set=current_set, all_docs=all_docs)
 
 
 
@@ -298,7 +308,7 @@ def projects():
         project_name = request.form.get("project_name")
 
         # add to the db
-        db.execute("INSERT INTO projects (project_number, project_name, project_admin_id) VALUES (?, ?, ?)", (project_number, project_name, user_id))
+        db.execute("INSERT INTO project (project_number, project_name, project_admin_id) VALUES (?, ?, ?)", (project_number, project_name, user_id))
         db.commit()
 
         # refresh page

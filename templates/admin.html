@@ -17,7 +17,8 @@
 
     <nav style="background-color: #f0f0f0; padding: 10px;">
         <a href="/admin" style="margin-right: 15px;">Dashboard</a>
-        <a href="/documents_library" style="margin-right: 15px;">Documents library</a>
+        <a href="/my_submitters" style="margin-right: 15px;">My Submitters</a>
+        <a href="/documents_library" style="margin-right: 15px;">Documents Library</a>
         <a href="/my_sets" style="margin-right: 15px;">Requirement Sets</a>
         <a href="/projects" style="margin-right: 15px;">Projects</a>
         <a href="/logout">Log Out</a>
@@ -25,22 +26,6 @@
 
     <h2>Hello, {{ user['name'] }}</h2>
 
-
-    <h3>Add New Project</h3>
-    <form method="post">
-        <input type="hidden" name="submitted_form" value="add_project">
-        <input type="text" name="project_number" placeholder="Project Number">
-        <input type="text" name="project_name" placeholder="Project Name">
-        <button type="submit">Add Project</button>
-    </form>
-
-   
-    <h3>Add New Subcontractor</h3>
-    <form method="post">
-        <input type="text" name="name" placeholder="Name" required><br>
-        <input type="email" name="email" placeholder="Email" required><br>
-        <button type="submit">Add Submitter</button>
-    </form>
 
 </body>
 </html>

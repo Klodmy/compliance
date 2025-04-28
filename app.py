@@ -67,6 +67,25 @@ def login():
 
 
 
+
+
+@app.route("/logout")
+def logout():
+
+    # clears session, returns to login page based on user's role
+    if session.get("admin"):
+        session.clear()
+        return redirect("/login")
+    elif session.get("submitter"):
+        session.clear()
+        return redirect("/submitter_login")
+    else:
+        session.clear()
+        return redirect("/")
+
+
+
+
 # registration
 @app.route("/registration", methods=['GET', 'POST'])
 def registration():
@@ -116,9 +135,7 @@ def admin():
     
     #if request.method == "POST":
     
-
-
-    # getting admin, submitters, projects
+   # getting admin, submitters, projects
     user = db.execute("SELECT * FROM admin_users WHERE id = ?", (session["id"],)).fetchone()
     subs = db.execute("SELECT * FROM submitting_users WHERE invited_by = ?", (session["id"],)).fetchall()
     projects = db.execute("SELECT * FROM project WHERE project_admin_id = ?", (user_id,)).fetchall()
@@ -319,8 +336,11 @@ def projects():
     
     return render_template("projects.html", projects=projects)
 
-@app.route("/add_submitter", methods=['GET', 'POST'])
-def add_submitter():
+
+
+
+@app.route("/my_submitters", methods=['GET', 'POST'])
+def my_submitters():
 
     db = get_db()
     user_id = session.get("id")
@@ -336,9 +356,70 @@ def add_submitter():
         # adding new user dummy data
         db.execute("INSERT INTO submitting_users (login, password, email, token, invited_by, name) VALUES (?, ?, ?, ?, ?, ?)", (str(randint(1, 1000)), str(randint(1, 1000)), email, new_token, user_id, name))
         db.commit()
-        return redirect("/add_submitter")
+        return redirect("/my_submitters")
     
     # get existing submitters
     submitters = db.execute("SELECT name, email FROM submitting_users WHERE invited_by = ?", (user_id,)).fetchall()
 
-    return render_template("add_submitter.html", submitters=submitters)
+    return render_template("my_submitters.html", submitters=submitters)
+
+
+
+
+
+@app.route("/registration/<token>", methods=["GET", "POST"])
+def submitter_registration(token):
+
+    db = get_db()
+    submitter = db.execute("SELECT * FROM submitting_users WHERE token = ?", (token,)).fetchone()
+
+    if request.method == "POST":
+
+        # getting new credentials 
+        login = request.form.get("login")
+        password = request.form.get("password")
+        password2 = request.form.get("password2")
+
+        if login and password and password2 and submitter:
+            if password == password2:
+                
+            # create new user in db
+                db.execute("UPDATE submitting_users SET login = ?, password = ? WHERE token = ?", (login, password, token))
+                db.commit()
+
+                # sands back to login
+                return redirect("/submitter_login")
+
+    # rendering registration page       
+    return render_template("submitter_registration.html")
+
+
+
+
+
+
+@app.route("/submitter_login", methods=["GET", "POST"])
+def submitter_login():
+
+    db = get_db()
+
+    if request.method == "POST":
+
+        login = request.form.get("login")
+        password = request.form.get("password")
+
+        user = db.execute("SELECT * FROM submitting_users WHERE login = ?", (login,)).fetchone()
+
+        if user and password == user["password"]:
+
+            # initiating session
+            session["submitter"] = True
+            session["id"] = user["id"]
+
+            # redirect to sub dashboard
+            return redirect("/submitter_dashboard")
+        
+    return render_template("submitter_login.html")
+        
+
+

@@ -129,18 +129,35 @@ def admin():
     user_id = session.get("id")
 
     # redirect if not logged in
-    if not user_id:
+    if not user_id and not session.get("admin"):
         return redirect("/login")
 
     
-    #if request.method == "POST":
+    if request.method == "POST":
+
+        # request required data from a form
+        project = request.form.get("project")
+        sub = request.form.get("submitter")
+        doc_set = request.form.get("set")
+
+        if project and sub and doc_set:
+            
+            # assigning this to variable in order to get ID later on
+            cur = db.execute("INSERT INTO requests (project_id, submitter_id, requirement_set_id, admin_id) VALUES (?, ?, ?, ?)", (project, sub, doc_set, user_id))
+            db.commit()
+
+            # gets ID of the last added row
+            request_id = cur.lastrowid
+
+            return redirect(f"/submission/{request_id}")
     
    # getting admin, submitters, projects
     user = db.execute("SELECT * FROM admin_users WHERE id = ?", (session["id"],)).fetchone()
     subs = db.execute("SELECT * FROM submitting_users WHERE invited_by = ?", (session["id"],)).fetchall()
     projects = db.execute("SELECT * FROM project WHERE project_admin_id = ?", (user_id,)).fetchall()
+    sets = db.execute("SELECT * FROM requirement_sets WHERE admin_user_id = ?", (user_id,)).fetchall()
 
-    return render_template("admin.html", user=user, subs=subs, projects=projects)
+    return render_template("admin.html", user=user, subs=subs, projects=projects, sets=sets)
 
 
 

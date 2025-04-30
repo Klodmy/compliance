@@ -1,9 +1,10 @@
 from flask import Flask, request, render_template, session, redirect, url_for, flash
 import sqlite3
 import uuid
-from utils import ex_check
+from utils import ex_check, send_email
 import os
 from random import randint
+from dotenv import load_dotenv
 
 
 app = Flask(__name__)
@@ -11,10 +12,13 @@ app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.secret_key = "mysecret"
 os.environ["FLASK_ENV"] = "development"
 
-# set uploads folder and allowed extensions
+
+# set uploads folder and allowed extensions, set email password
 UPLOAD_FOLDER = "uploads"
 ALLOWED_EXTENSIONS = ["pdf", "png", "jpg", "jpeg"]
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+email_password = os.environ.get("EMAIL_APP_PASSWORD")
+load_dotenv()
 
 # connects database
 def get_db():
@@ -127,6 +131,7 @@ def admin():
     # db call, gets admin's id
     db = get_db()
     user_id = session.get("id")
+    
 
     # redirect if not logged in
     if not user_id and not session.get("admin"):
@@ -148,6 +153,17 @@ def admin():
 
             # gets ID of the last added row
             request_id = cur.lastrowid
+
+            # get data to send email
+            user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
+            submitter_email = db.execute("SELECT email FROM submitting_users WHERE id = ?", (sub,)).fetchone()
+            the_project = db.execute("SELECT project_name FROM project WHERE id = ?", (project,)).fetchone()
+
+            # body of the emai in case reveiving app does not render html
+            body = f"You have a submittal request from {user_name['login']}. Please follow the following link to login: http://127.0.0.1:5000/submitter_login"
+
+            # sends an email
+            send_email(user_name["login"], submitter_email["email"], f"Submittals request for {the_project['project_name']}", body, email_password)
 
             return redirect(f"/submission/{request_id}")
     

@@ -1,15 +1,3 @@
-import sqlite3
+import os
 
-conn = sqlite3.connect("database.db")
-c = conn.cursor()
-
-# Insert a test subcontractor
-c.execute("""
-    INSERT INTO subcontractors (name, token, email)
-    VALUES (?, ?, ?)
-""", ("Test Sub Inc", "abc123", "test@sub.com"))
-
-conn.commit()
-conn.close()
-
-print("Subcontractor added.")
+print("EMAIL_APP_PASSWORD:", os.environ.get("EMAIL_APP_PASSWORD"))

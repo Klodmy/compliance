@@ -8,5 +8,8 @@ __pycache__/
 # Ignore database
 *.db
 
-# Ignore env file (if you use it later)
+# Ignore env file 
 .env
+
+# Ignor file for tests
+test.py

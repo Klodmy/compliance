@@ -2,38 +2,23 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Document Submission</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 40px; }
-        h2 { margin-bottom: 20px; }
-        form { max-width: 600px; }
-        .doc-block { margin-bottom: 25px; }
-        label { display: block; margin-bottom: 6px; }
-        input[type="file"], input[type="date"] {
-            padding: 6px;
-            width: 100%;
-            margin-bottom: 10px;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-        }
-    </style>
+    <title>Submit Required Documents</title>
 </head>
 <body>
-    <h2>Hello, {{ user['login'] }} — please upload your documents</h2>
+    <h2>Submit Documents for Project</h2>
 
     <form method="post" enctype="multipart/form-data">
-        {% for doc in requirements %}
-        <div class="doc-block">
-            <label><strong>{{ doc['doc_type'] }}</strong></label>
-            <input type="file" name="{{ doc['doc_type'] }}" required>
-            <label>Expiry date:</label>
-            <input type="date" name="{{ doc['doc_type'] }}_expiry">
-        </div>
+        {% for doc in doc_requests["requirement_set_id"] | required_docs %}
+            <div style="margin-bottom: 20px;">
+                <label><strong>{{ doc.doc_type }}</strong></label><br>
+                <input type="file" name="{{ doc.doc_type }}" required><br>
+                <label>Expiry Date (if applicable):</label>
+                <input type="date" name="{{ doc.doc_type }}_expiry">
+            </div>
         {% endfor %}
-
+        
         <button type="submit">Submit</button>
     </form>
 </body>
 </html>
+

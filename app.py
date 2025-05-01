@@ -5,7 +5,8 @@ from utils import ex_check, send_email
 import os
 from random import randint
 from dotenv import load_dotenv
-
+import secrets
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
@@ -144,11 +145,12 @@ def admin():
         project = request.form.get("project")
         sub = request.form.get("submitter")
         doc_set = request.form.get("set")
+        token = secrets.token_urlsafe(10)
 
         if project and sub and doc_set:
             
             # assigning this to variable in order to get ID later on
-            cur = db.execute("INSERT INTO requests (project_id, submitter_id, requirement_set_id, admin_id) VALUES (?, ?, ?, ?)", (project, sub, doc_set, user_id))
+            cur = db.execute("INSERT INTO requests (project_id, submitter_id, requirement_set_id, admin_id, token) VALUES (?, ?, ?, ?, ?)", (project, sub, doc_set, user_id, token))
             db.commit()
 
             # gets ID of the last added row
@@ -165,15 +167,16 @@ def admin():
             # sends an email
             send_email(user_name["login"], submitter_email["email"], f"Submittals request for {the_project['project_name']}", body, email_password)
 
-            return redirect(f"/submission/{request_id}")
+            return redirect("/admin")
     
    # getting admin, submitters, projects
     user = db.execute("SELECT * FROM admin_users WHERE id = ?", (session["id"],)).fetchone()
     subs = db.execute("SELECT * FROM submitting_users WHERE invited_by = ?", (session["id"],)).fetchall()
     projects = db.execute("SELECT * FROM project WHERE project_admin_id = ?", (user_id,)).fetchall()
     sets = db.execute("SELECT * FROM requirement_sets WHERE admin_user_id = ?", (user_id,)).fetchall()
+    requests = db.execute("SELECT * FROM requests").fetchall()
 
-    return render_template("admin.html", user=user, subs=subs, projects=projects, sets=sets)
+    return render_template("admin.html", user=user, subs=subs, projects=projects, sets=sets, requests=requests)
 
 
 
@@ -203,16 +206,18 @@ def submission(token):
     db = get_db()
 
     # get data of the user that is submitting
-    submitting_user = db.execute("SELECT * FROM users WHERE token = ?", (token,)).fetchone()
+    doc_request = db.execute("SELECT * FROM requests WHERE token = ?", (token,)).fetchone()
 
-    # check if data is missing/no user
-    if not submitting_user:
-        return "Invalid or expired link", 404
+    # check in case token is not valid
+    if not doc_request:
+        return "Invalid token", 404
+    
+     # get all required docs for this user
+    required_docs = db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (doc_request["requirement_set_id"],)).fetchall()
     
     # if user submits the form
     if request.method == "POST":
-        # get all required docs for this user
-        required_docs = db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (submitting_user["requirement_set_id"],)).fetchall()
+       
 
         # looping through required docs
         for doc in required_docs:
@@ -224,7 +229,7 @@ def submission(token):
             # checks if there is file, it has name and extension is allowed
             if file and file.filename and ex_check(file.filename, ALLOWED_EXTENSIONS):
                 # assign file name in readable format
-                filename = f"{submitting_user['id']}_{doc_type}_{file.filename}"
+                filename = f"{session['id']}_{doc_type}_{file.filename}"
                 # join upload folder and new file name
                 filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
                 # saves expiry date
@@ -233,11 +238,11 @@ def submission(token):
                 file.save(filepath)
 
                 # adds information about this submission to db
-                db.execute("INSERT INTO docs (user_id, link, date_submitted, expiry_date, confirmation, doc_type) VALUES (?, ?, datetime('now'), ?, 'pending', ?)", (submitting_user['id'], filepath, expiry, doc_type))
+                db.execute("INSERT INTO docs (user_id, link, date_submitted, expiry_date, confirmation, doc_type, request_id) VALUES (?, ?, datetime('now'), ?, 'pending', ?, ?)", (session['id'], filepath, expiry, doc_type, doc_request["id"]))
             
         db.commit()
         
-    return render_template("submission.html", user=submitting_user)
+    return render_template("submission.html", doc_request=doc_request, required_docs=required_docs)
 
 
 
@@ -434,10 +439,12 @@ def submitter_registration(token):
 @app.route("/submitter_login", methods=["GET", "POST"])
 def submitter_login():
 
+    # calls db
     db = get_db()
 
     if request.method == "POST":
-
+        
+        # request information through forms
         login = request.form.get("login")
         password = request.form.get("password")
 

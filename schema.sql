@@ -27,9 +27,7 @@ CREATE TABLE requirement_sets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     admin_user_id INTEGER NOT NULL,
-    submitting_user_id INTEGER NOT NULL,
-    FOREIGN KEY (admin_user_id) REFERENCES admin_users(id),
-    FOREIGN KEY (submitting_user_id) REFERENCES submitting_users(id)
+    FOREIGN KEY (admin_user_id) REFERENCES admin_users(id)
 );
 
 CREATE TABLE requirements (
@@ -49,9 +47,27 @@ CREATE TABLE docs (
     doc_type TEXT NOT NULL,
     submitting_user_id INTEGER NOT NULL,
     admin_user_id INTEGER NOT NULL,
+    request_id,
     FOREIGN KEY (submitting_user_id) REFERENCES submitting_users(id),
-    FOREIGN KEY (admin_user_id) REFERENCES admin_users(id)
+    FOREIGN KEY (admin_user_id) REFERENCES admin_users(id),
+    FOREIGN KEY (request_id) REFERENCES requests(id)
 );
 
+CREATE TABLE users_docs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL, description TEXT, 
+    user_id TEXT, 
+    FOREIGN KEY (user_id) REFERENCES admin_users(id)
+);
 
-
+ 
+CREATE TABLE requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    submitter_id INTEGER NOT NULL,
+    requirement_set_id INTEGER NOT NULL,
+    admin_id INTEGER NOT NULL,
+    token TEXT UNIQUE,
+    status TEXT DEFAULT 'pending review',
+    date_requested TEXT DEFAULT CURRENT_TIMESTAMP
+);

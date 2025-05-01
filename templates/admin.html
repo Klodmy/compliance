@@ -59,6 +59,32 @@
         <button type="submit">Create Request</button>
     </form>
 
+    <hr>
+        <h3>Existing Submittal Requests</h3>
+
+    <table border="1" cellpadding="8" cellspacing="0">
+        <tr>
+            <th>Project</th>
+            <th>Submitter</th>
+            <th>Requirement Set</th>
+            <th>Status</th>
+            <th>Submission Link</th>
+        </tr>
+    {% for req in requests %}
+    <tr>
+        <td>{{ req.project_id }}</td>
+        <td>{{ req.submitter_id }}</td>
+        <td>{{ req.requirement_set_id }}</td>
+        <td>{{ req.status }}</td>
+        <td> <a href="/submission/{{ req.token }}" target="_blank">Open</a></td>
+    </tr>
+    {% else %}
+    <tr>
+        <td colspan="5">No requests yet.</td>
+    </tr>
+    {% endfor %}
+</table>
+
 
 </body>
 </html>

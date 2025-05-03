@@ -47,7 +47,7 @@ CREATE TABLE docs (
     doc_type TEXT NOT NULL,
     submitting_user_id INTEGER NOT NULL,
     admin_user_id INTEGER NOT NULL,
-    request_id,
+    request_id INTEGER,
     FOREIGN KEY (submitting_user_id) REFERENCES submitting_users(id),
     FOREIGN KEY (admin_user_id) REFERENCES admin_users(id),
     FOREIGN KEY (request_id) REFERENCES requests(id)

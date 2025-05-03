@@ -8,7 +8,7 @@
     <h2>Submit Documents for Project</h2>
 
     <form method="post" enctype="multipart/form-data">
-        {% for doc in doc_requests["requirement_set_id"] | required_docs %}
+        {% for doc in required_docs %}
             <div style="margin-bottom: 20px;">
                 <label><strong>{{ doc.doc_type }}</strong></label><br>
                 <input type="file" name="{{ doc.doc_type }}" required><br>
@@ -16,7 +16,6 @@
                 <input type="date" name="{{ doc.doc_type }}_expiry">
             </div>
         {% endfor %}
-        
         <button type="submit">Submit</button>
     </form>
 </body>

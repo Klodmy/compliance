@@ -199,14 +199,14 @@ def delete_user():
 
 
 
-# page for the submission of the documents by the sub
+# page for the submission of the documents by the request
 @app.route("/submission/<token>", methods=['GET', 'POST'])
 def submission(token):
 
     # call db
     db = get_db()
 
-    # get data of the user that is submitting
+    # get data of the request
     doc_request = db.execute("SELECT * FROM requests WHERE token = ?", (token,)).fetchone()
 
     # check in case token is not valid
@@ -239,7 +239,7 @@ def submission(token):
                 file.save(filepath)
 
                 # adds information about this submission to db
-                db.execute("INSERT INTO docs (user_id, link, date_submitted, expiry_date, confirmation, doc_type, request_id) VALUES (?, ?, datetime('now'), ?, 'pending', ?, ?)", (session['id'], filepath, expiry, doc_type, doc_request["id"]))
+                db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation, doc_type, request_id, admin_user_id) VALUES (?, ?, datetime('now'), ?, 'pending', ?, ?, ?)", (session['id'], filepath, expiry, doc_type, doc_request["id"], doc_request["admin_id"]))
             
         db.commit()
         

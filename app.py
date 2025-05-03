@@ -160,12 +160,13 @@ def admin():
             user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
             submitter_email = db.execute("SELECT email FROM submitting_users WHERE id = ?", (sub,)).fetchone()
             the_project = db.execute("SELECT project_name FROM project WHERE id = ?", (project,)).fetchone()
+            sub_token = db.execute("SELECT token FROM submitting_users WHERE id = ?", (sub,)).fetchone()
 
             # body of the emai in case reveiving app does not render html
             body = f"You have a submittal request from {user_name['login']}. Please follow the following link to login: http://127.0.0.1:5000/submitter_login"
 
             # sends an email
-            send_email(user_name["login"], submitter_email["email"], f"Submittals request for {the_project['project_name']}", body, email_password)
+            send_email(user_name["login"], submitter_email["email"], f"Submittals request for {the_project['project_name']}", body, email_password, sub_token['token'])
 
             return redirect("/admin")
     
@@ -405,7 +406,7 @@ def my_submitters():
 
 
 
-@app.route("/registration/<token>", methods=["GET", "POST"])
+@app.route("/submitter_registration/<token>", methods=["GET", "POST"])
 def submitter_registration(token):
 
     db = get_db()
@@ -448,7 +449,13 @@ def submitter_login():
         login = request.form.get("login")
         password = request.form.get("password")
 
+        print("Submitted login:", login)
+        print("Submitted password:", password)
+
         user = db.execute("SELECT * FROM submitting_users WHERE login = ?", (login,)).fetchone()
+
+        print(user["login"])
+        print(user["password"])
 
         if user and password == user["password"]:
 
@@ -463,3 +470,33 @@ def submitter_login():
         
 
 
+@app.route("/submitter_dashboard", methods=['GET', 'POST'])
+def submitter_dashboard():
+
+    # db call, gets admin's id
+    db = get_db()
+    submitter_id = session.get("id")
+    
+
+    # redirect if not logged in
+    if not submitter_id and not session.get("submitter"):
+        return redirect("/submitter_login")
+
+    submitter = db.execute("SELECT * FROM submitting_users WHERE id = ?", (submitter_id,)).fetchone()
+    sub_requests = db.execute("""
+    SELECT 
+        requests.project_id,
+        requests.admin_id,
+        requests.token,
+        requests.status,
+        admin_users.login AS gc_name,
+        project.project_name
+    FROM requests
+    JOIN admin_users ON requests.admin_id = admin_users.id
+    JOIN project ON requests.project_id = project.id
+    WHERE requests.submitter_id = ?
+""", (submitter_id,)).fetchall()
+
+   
+
+    return render_template("submitter_dashboard.html", submitter=submitter, sub_requests=sub_requests)

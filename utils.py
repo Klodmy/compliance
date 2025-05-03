@@ -15,7 +15,7 @@ def ex_check(name, allowed):
 
 
 # connects to gmail and sends an email
-def send_email(send_from, send_to, subject, body, password):
+def send_email(send_from, send_to, subject, body, password, token):
     email = EmailMessage()
     email["From"] = "dk.ads24@gmail.com"
     email["To"] = send_to
@@ -28,7 +28,7 @@ def send_email(send_from, send_to, subject, body, password):
                 <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
                     <h2 style="color: #444;">You have a new submittal request from <span style="color: #007bff;">{send_from}</span></h2>
                     <p>Please log in to your dashboard to review the request.</p>
-                    <a href="http://127.0.0.1:5000/submitter_login"
+                    <a href="http://127.0.0.1:5000/submitter_registration/{token}"
                     tyle="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Login to Dashboard</a>
                 </div>
             </body>

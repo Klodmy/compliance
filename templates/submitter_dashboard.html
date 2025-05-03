@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 40px; }
+        h2 { margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        form input, form select { margin-bottom: 10px; padding: 6px; width: 300px; }
+        button { padding: 8px 20px; }
+    </style>
+</head>
+<body>
+
+    <nav style="background-color: #f0f0f0; padding: 10px;">
+        <a href="/admin" style="margin-right: 15px;">Dashboard</a>
+        <a href="/my_submitters" style="margin-right: 15px;">My Submitters</a>
+        <a href="/documents_library" style="margin-right: 15px;">Documents Library</a>
+        <a href="/my_sets" style="margin-right: 15px;">Requirement Sets</a>
+        <a href="/projects" style="margin-right: 15px;">Projects</a>
+        <a href="/logout">Log Out</a>
+    </nav>
+
+    <h2>Hello, {{ submitter['login'] }}</h2>
+
+
+    <h3>Your Submittal Requests</h3>
+
+    <table border="1" cellpadding="8" cellspacing="0">
+        <tr>
+            <th>Project</th>
+            <th>Requested By</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+        {% for req in sub_requests %}
+        <tr>
+            <td>{{ req.project_name }}</td>
+            <td>{{ req.gc_name }}</td>
+            <td>{{ req.status }}</td>
+            <td><a href="/submission/{{ req.token }}">Submit Docs</a></td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="4">You have no active submittal requests.</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+</body>
+</html>

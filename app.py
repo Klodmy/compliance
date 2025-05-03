@@ -177,7 +177,19 @@ def admin():
     sets = db.execute("SELECT * FROM requirement_sets WHERE admin_user_id = ?", (user_id,)).fetchall()
     requests = db.execute("SELECT * FROM requests").fetchall()
 
-    return render_template("admin.html", user=user, subs=subs, projects=projects, sets=sets, requests=requests)
+    this_req = db.execute("""
+                        SELECT 
+                            project.project_number, 
+                            project.project_name, 
+                            submitting_users.name, 
+                            requests.status,
+                            requests.token
+                        FROM requests
+                        JOIN project ON requests.project_id = project.id
+                        JOIN submitting_users ON requests.submitter_id = submitting_users.id
+                        """).fetchall()
+
+    return render_template("admin.html", user=user, subs=subs, projects=projects, sets=sets, requests=requests, this_req=this_req)
 
 
 

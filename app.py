@@ -512,3 +512,26 @@ def submitter_dashboard():
    
 
     return render_template("submitter_dashboard.html", submitter=submitter, sub_requests=sub_requests)
+
+
+@app.route("/review_submission/<token>")
+def review_submission(token):
+
+    db = get_db()
+
+    submission = db.execute("""
+    SELECT
+        project.project_number,
+        project.project_name,
+        requests.submitter_id,
+        requests.token,
+        requests.status,
+        submitting_users.name,
+        docs.*
+    FROM requests
+    JOIN project ON requests.project_id = project.id
+    JOIN submitting_users ON requests.submitter_id = submitting_users.id
+    JOIN docs ON docs.request_id = requests.id
+    WHERE requests.token = ?""", (token,)).fetchall()
+
+    return render_template("review_submission.html", submission=submission)

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Submitted Documents</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f4f4f4;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
+        }
+
+        thead {
+            background-color: #333;
+            color: #fff;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .status {
+            font-weight: bold;
+            text-transform: capitalize;
+        }
+
+        .status.pending-submission { color: #999; }
+        .status.pending-review { color: #f0ad4e; }
+        .status.approved { color: #5cb85c; }
+        .status.action-required { color: #d9534f; }
+    </style>
+</head>
+<body>
+
+    <nav style="background-color: #f0f0f0; padding: 10px;">
+        <a href="/admin" style="margin-right: 15px;">Dashboard</a>
+        <a href="/my_submitters" style="margin-right: 15px;">My Submitters</a>
+        <a href="/documents_library" style="margin-right: 15px;">Documents Library</a>
+        <a href="/my_sets" style="margin-right: 15px;">Requirement Sets</a>
+        <a href="/projects" style="margin-right: 15px;">Projects</a>
+        <a href="/logout">Log Out</a>
+    </nav>
+
+    <h2>Submitted Documents</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Document Type</th>
+                <th>Status</th>
+                <th>Expiry Date</th>
+                <th>File</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for doc in submission %}
+            <tr>
+                <td>{{ doc.doc_type }}</td>
+                <td>
+                    <span class="status {{ doc.status|replace('_', '-') }}">
+                        {{ doc.status.replace('_', ' ').title() }}
+                    </span>
+                </td>
+                <td>
+                    {% if doc.expiry_date %}
+                        {{ doc.expiry_date }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>
+                    {% if doc.link %}
+                        <a href="{{ doc.link }}" target="_blank">View File</a>
+                    {% else %}
+                        Not submitted
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</body>
+</html>

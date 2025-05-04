@@ -76,6 +76,7 @@
                 <th>Status</th>
                 <th>Expiry Date</th>
                 <th>File</th>
+                <th>Update</th>
             </tr>
         </thead>
         <tbody>
@@ -83,9 +84,13 @@
             <tr>
                 <td>{{ doc.doc_type }}</td>
                 <td>
-                    <span class="status {{ doc.status|replace('_', '-') }}">
-                        {{ doc.status.replace('_', ' ').title() }}
-                    </span>
+                    <form method="post" action="/change_status">
+                        <select name="new_status">
+                            <option value="pending_review" {% if doc.doc_status == 'pending_review' %}selected{% endif %}>Pending Review</option>
+                            <option value="approved" {% if doc.doc_status == 'approved' %}selected{% endif %}>Approved</option>
+                            <option value="action_required" {% if doc.doc_status == 'action_required' %}selected{% endif %}>Action Required</option> 
+                        </select>
+                    </form>
                 </td>
                 <td>
                     {% if doc.expiry_date %}
@@ -96,10 +101,14 @@
                 </td>
                 <td>
                     {% if doc.link %}
-                        <a href="{{ doc.link }}" target="_blank">View File</a>
+                        <a href="{{ doc.link }}" target="_blank">View</a>
                     {% else %}
                         Not submitted
                     {% endif %}
+                </td>
+                <td>
+                        <input type="hidden" name="doc_id" value="{{ doc.id }}">
+                        <button type="submit">Update</button>                 
                 </td>
             </tr>
             {% endfor %}
@@ -108,3 +117,4 @@
 
 </body>
 </html>
+

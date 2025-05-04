@@ -204,7 +204,7 @@ def delete_user():
 
     # if got, deletes this user from the db
     if token:
-        db.execute("DELETE FROM users WHERE token = ? and role = 'sub'", (token, ))
+        db.execute("DELETE FROM users WHERE token = ?", (token, ))
         db.commit()
         return redirect("/admin")
 
@@ -494,7 +494,10 @@ def submitter_dashboard():
     if not submitter_id and not session.get("submitter"):
         return redirect("/submitter_login")
 
+    # get submitter
     submitter = db.execute("SELECT * FROM submitting_users WHERE id = ?", (submitter_id,)).fetchone()
+
+    # get information about request to display
     sub_requests = db.execute("""
     SELECT 
         requests.project_id,
@@ -509,8 +512,6 @@ def submitter_dashboard():
     WHERE requests.submitter_id = ?
 """, (submitter_id,)).fetchall()
 
-   
-
     return render_template("submitter_dashboard.html", submitter=submitter, sub_requests=sub_requests)
 
 
@@ -519,6 +520,7 @@ def review_submission(token):
 
     db = get_db()
 
+    # get information about submission to show admin for review
     submission = db.execute("""
     SELECT
         project.project_number,
@@ -535,3 +537,31 @@ def review_submission(token):
     WHERE requests.token = ?""", (token,)).fetchall()
 
     return render_template("review_submission.html", submission=submission)
+
+
+
+@app.route("/change_status", methods=['POST'])
+def change_status():
+
+    db = get_db()
+
+    # get updated status and document id
+    new_status = request.form.get("new_status")
+    doc_id = request.form.get("doc_id")
+
+
+    token = db.execute("""
+    SELECT
+        requests.token
+    FROM requests
+    JOIN docs ON docs.request_id = requests.id
+    WHERE docs.id = ?    
+    """, (doc_id,)).fetchone()
+
+    # if provided update db
+    if new_status and doc_id:
+
+        db.execute("UPDATE docs SET status = ? WHERE id = ?", (new_status, doc_id))
+        db.commit()
+    
+    return redirect(f"/review_submission/{token['token']}")

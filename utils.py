@@ -42,6 +42,44 @@ def send_email(send_from, send_to, subject, body, password, token):
         smpt.send_message(email)
 
 
+# checks submission status based on statuses of docs
+def get_submission_status(docs):
+
+    submitted_with_files = []
+    approved = []
+
+    # checks number of submitted docs
+    for doc in docs:
+        if doc['link']:
+            submitted_with_files.append(doc)
+
+        if doc['doc_status'] == "approved":
+            approved.append(doc)
+
+        if doc['doc_status'] == "action_required":
+            return "action_required"
+        
+
+    if len(submitted_with_files) == 0:
+        print("1")
+        return "pending_submission"
+    
+    elif len(submitted_with_files) < len(docs):
+        print("2")
+        return "partially_submitted"
+    
+    elif len(approved) == len(docs):
+        print("3")
+        return "approved"
+    
+    else:
+        print("4")
+        return "pending_review"
+    
+    
+
+
+
 
 if __name__ == "__main__":
     main()

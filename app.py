@@ -1,7 +1,7 @@
 from flask import Flask, request, render_template, session, redirect, url_for, flash
 import sqlite3
 import uuid
-from utils import ex_check, send_email
+from utils import ex_check, send_email, get_submission_status
 import os
 from random import randint
 from dotenv import load_dotenv
@@ -134,8 +134,8 @@ def admin():
     user_id = session.get("id")
     
 
-    # redirect if not logged in
-    if not user_id and not session.get("admin"):
+    # redirect if not logged in as admin
+    if not session.get("admin"):
         return redirect("/login")
 
     
@@ -187,7 +187,8 @@ def admin():
                         FROM requests
                         JOIN project ON requests.project_id = project.id
                         JOIN submitting_users ON requests.submitter_id = submitting_users.id
-                        """).fetchall()
+                        WHERE requests.admin_id = ?
+                        """, (session.get('id'),)).fetchall()
 
     return render_template("admin.html", user=user, subs=subs, projects=projects, sets=sets, requests=requests, this_req=this_req)
 
@@ -264,6 +265,10 @@ def submission(token):
 @app.route("/my_sets", methods=['GET', 'POST'])
 def my_sets():
 
+    # redirect if not logged in as admin
+    if not session.get("admin"):
+        return redirect("/login")
+
     db = get_db()
 
     # gets current user id
@@ -295,6 +300,10 @@ def my_sets():
 
 @app.route("/my_sets/<set_id>", methods=['GET', 'POST'])
 def edit_set(set_id):
+
+    # redirect if not logged in as admin
+    if not session.get("admin"):
+        return redirect("/login")
 
     db = get_db()
     user_id = session.get("id")
@@ -339,6 +348,10 @@ def edit_set(set_id):
 @app.route("/documents_library", methods=['GET', 'POST'])
 def documents_library():
 
+    # redirect if not logged in as admin
+    if not session.get("admin"):
+        return redirect("/login")
+
     # call db, get user id
     db = get_db()
     user_id = session.get("id")
@@ -364,6 +377,10 @@ def documents_library():
 
 @app.route("/projects", methods=['GET', 'POST'])
 def projects():
+
+    # redirect if not logged in as admin
+    if not session.get("admin"):
+        return redirect("/login")
     
     # call db, get user id
     db = get_db()
@@ -392,6 +409,10 @@ def projects():
 
 @app.route("/my_submitters", methods=['GET', 'POST'])
 def my_submitters():
+
+    # redirect if not logged in as admin
+    if not session.get("admin"):
+        return redirect("/login")
 
     db = get_db()
     user_id = session.get("id")
@@ -485,6 +506,10 @@ def submitter_login():
 @app.route("/submitter_dashboard", methods=['GET', 'POST'])
 def submitter_dashboard():
 
+    # redirect if not logged in as admin
+    if not session.get("submitter"):
+        return redirect("/login")
+
     # db call, gets admin's id
     db = get_db()
     submitter_id = session.get("id")
@@ -517,6 +542,10 @@ def submitter_dashboard():
 
 @app.route("/review_submission/<token>")
 def review_submission(token):
+
+    # redirect if not logged in as admin
+    if not session.get("admin"):
+        return redirect("/login")
 
     db = get_db()
 
@@ -552,7 +581,8 @@ def change_status():
 
     token = db.execute("""
     SELECT
-        requests.token
+        requests.token,
+        requests.id
     FROM requests
     JOIN docs ON docs.request_id = requests.id
     WHERE docs.id = ?    
@@ -561,7 +591,17 @@ def change_status():
     # if provided update db
     if new_status and doc_id:
 
-        db.execute("UPDATE docs SET status = ? WHERE id = ?", (new_status, doc_id))
+        db.execute("UPDATE docs SET doc_status = ? WHERE id = ?", (new_status, doc_id))
         db.commit()
-    
+
+        # gets docs from this request and checks for the whole submission status
+        docs = db.execute("SELECT * FROM docs WHERE request_id = ?", (token['id'],)).fetchall()
+        new_request_status = get_submission_status(docs)
+        print(new_request_status)
+
+        # updates submission status
+        db.execute("UPDATE requests SET status = ? WHERE id = ?", (new_request_status, token['id']))
+        db.commit()
+
+
     return redirect(f"/review_submission/{token['token']}")

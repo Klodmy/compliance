@@ -84,13 +84,11 @@
             <tr>
                 <td>{{ doc.doc_type }}</td>
                 <td>
-                    <form method="post" action="/change_status">
-                        <select name="new_status">
-                            <option value="pending_review" {% if doc.doc_status == 'pending_review' %}selected{% endif %}>Pending Review</option>
-                            <option value="approved" {% if doc.doc_status == 'approved' %}selected{% endif %}>Approved</option>
-                            <option value="action_required" {% if doc.doc_status == 'action_required' %}selected{% endif %}>Action Required</option> 
-                        </select>
-                    </form>
+                    <select name="new_status" form="form-{{ doc.id }}">
+                        <option value="pending_review" {% if doc.doc_status == 'pending_review' %}selected{% endif %}>Pending Review</option>
+                        <option value="approved" {% if doc.doc_status == 'approved' %}selected{% endif %}>Approved</option>
+                        <option value="action_required" {% if doc.doc_status == 'action_required' %}selected{% endif %}>Action Required</option>
+                    </select>
                 </td>
                 <td>
                     {% if doc.expiry_date %}
@@ -107,11 +105,14 @@
                     {% endif %}
                 </td>
                 <td>
+                    <form method="post" action="/change_status" id="form-{{ doc.id }}">
                         <input type="hidden" name="doc_id" value="{{ doc.id }}">
-                        <button type="submit">Update</button>                 
+                        <button type="submit">Update</button>
+                    </form>
                 </td>
             </tr>
             {% endfor %}
+
         </tbody>
     </table>
 

@@ -57,6 +57,8 @@
     </style>
 </head>
 <body>
+    
+
 
     <nav style="background-color: #f0f0f0; padding: 10px;">
         <a href="/admin" style="margin-right: 15px;">Dashboard</a>
@@ -68,6 +70,16 @@
     </nav>
 
     <h2>Submitted Documents</h2>
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+       <div class="flash-messages">
+        {% for message in messages %}
+        <div class="flash">{{ message }}</div>
+        {% endfor %}
+       </div>
+    {% endif %}
+    {% endwith %}
 
     <table>
         <thead>
@@ -82,7 +94,9 @@
         <tbody>
             {% for doc in submission %}
             <tr>
-                <td>{{ doc.doc_type }}</td>
+                <td>{{ doc.doc_type }}
+                   
+                </td>
                 <td>
                     <select name="new_status" form="form-{{ doc.id }}">
                         <option value="pending_review" {% if doc.doc_status == 'pending_review' %}selected{% endif %}>Pending Review</option>

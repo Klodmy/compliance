@@ -197,17 +197,21 @@ def admin():
 
 # removes sub from the db when "delete" button is hit
 @app.route("/delete_sub", methods=['POST'])
-def delete_user():
+def delete_sub():
     # call db
     db = get_db()
     # gets user's token
     token = request.form.get("token")
+    sub = db.execute("SELECT name FROM submitting_users WHERE token = ?", (token,)).fetchone()
+    
 
     # if got, deletes this user from the db
     if token:
-        db.execute("DELETE FROM users WHERE token = ?", (token, ))
+        flash(f"Submitter {sub['name']} has been successfully deleted.")
+        db.execute("DELETE FROM submitting_users WHERE token = ?", (token,))
         db.commit()
-        return redirect("/admin")
+        
+    return redirect("/my_submitters")
 
 
 
@@ -428,10 +432,11 @@ def my_submitters():
         # adding new user dummy data
         db.execute("INSERT INTO submitting_users (login, password, email, token, invited_by, name) VALUES (?, ?, ?, ?, ?, ?)", (str(randint(1, 1000)), str(randint(1, 1000)), email, new_token, user_id, name))
         db.commit()
+        flash(f"Submitter {name} was successfully added.")
         return redirect("/my_submitters")
     
     # get existing submitters
-    submitters = db.execute("SELECT name, email FROM submitting_users WHERE invited_by = ?", (user_id,)).fetchall()
+    submitters = db.execute("SELECT name, email, token FROM submitting_users WHERE invited_by = ?", (user_id,)).fetchall()
 
     return render_template("my_submitters.html", submitters=submitters)
 
@@ -597,11 +602,10 @@ def change_status():
         # gets docs from this request and checks for the whole submission status
         docs = db.execute("SELECT * FROM docs WHERE request_id = ?", (token['id'],)).fetchall()
         new_request_status = get_submission_status(docs)
-        print(new_request_status)
 
         # updates submission status
         db.execute("UPDATE requests SET status = ? WHERE id = ?", (new_request_status, token['id']))
         db.commit()
 
-
+    flash("Status updated successfully.")
     return redirect(f"/review_submission/{token['token']}")

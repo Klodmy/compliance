@@ -31,7 +31,7 @@
         <label for="project">Select Project:</label><br>
         <select name="project" required>
             {% for project in projects %}
-                <option value="{{ project.name }}">{{ project.project_name }}</option>
+                <option value="{{ project.id }}">{{ project.project_name }}</option>
             {% else %}
                 <option disabled>No projects found</option>
             {% endfor %}
@@ -40,7 +40,7 @@
         <label for="submitter">Select Submitter:</label><br>
         <select name="submitter" required>
             {% for sub in subs %}
-                <option value="{{ sub.name }}">{{ sub.name }}</option>
+                <option value="{{ sub.id }}">{{ sub.name }}</option>
             {% else %}
                 <option disabled>No submitters found</option>
             {% endfor %}
@@ -50,7 +50,7 @@
         <!-- You haven't loaded sets yet in your backend code; placeholder below -->
         <select name="set" required>
             {% for set in sets %}
-                <option value="{{ set.name }}">{{ set.name }}</option>
+                <option value="{{ set.id }}">{{ set.name }}</option>
             {% else %}
             <option disabled>No sets found</option>
             {% endfor %}

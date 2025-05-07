@@ -487,13 +487,7 @@ def submitter_login():
         login = request.form.get("login")
         password = request.form.get("password")
 
-        print("Submitted login:", login)
-        print("Submitted password:", password)
-
         user = db.execute("SELECT * FROM submitting_users WHERE login = ?", (login,)).fetchone()
-
-        print(user["login"])
-        print(user["password"])
 
         if user and password == user["password"]:
 
@@ -503,6 +497,10 @@ def submitter_login():
 
             # redirect to sub dashboard
             return redirect("/submitter_dashboard")
+        
+        else:
+            flash("Login or password is invalid.")
+            return redirect("/submitter_login")
         
     return render_template("submitter_login.html")
         
@@ -554,6 +552,7 @@ def review_submission(token):
 
     db = get_db()
 
+
     # get information about submission to show admin for review
     submission = db.execute("""
     SELECT
@@ -562,15 +561,19 @@ def review_submission(token):
         requests.submitter_id,
         requests.token,
         requests.status,
+        requests.requirement_set_id,
         submitting_users.name,
         docs.*
     FROM requests
     JOIN project ON requests.project_id = project.id
     JOIN submitting_users ON requests.submitter_id = submitting_users.id
-    JOIN docs ON docs.request_id = requests.id
+    LEFT JOIN docs ON docs.request_id = requests.id
     WHERE requests.token = ?""", (token,)).fetchall()
 
-    return render_template("review_submission.html", submission=submission)
+    requirements = db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (submission[0]["requirement_set_id"],)).fetchall()
+    print(len(requirements))
+
+    return render_template("review_submission.html", submission=submission, requirements=requirements)
 
 
 

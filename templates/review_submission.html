@@ -92,40 +92,51 @@
             </tr>
         </thead>
         <tbody>
-            {% for doc in submission %}
-            <tr>
-                <td>{{ doc.doc_type }}
-                   
-                </td>
-                <td>
-                    <select name="new_status" form="form-{{ doc.id }}">
-                        <option value="pending_review" {% if doc.doc_status == 'pending_review' %}selected{% endif %}>Pending Review</option>
-                        <option value="approved" {% if doc.doc_status == 'approved' %}selected{% endif %}>Approved</option>
-                        <option value="action_required" {% if doc.doc_status == 'action_required' %}selected{% endif %}>Action Required</option>
-                    </select>
-                </td>
-                <td>
-                    {% if doc.expiry_date %}
-                        {{ doc.expiry_date }}
-                    {% else %}
-                        —
-                    {% endif %}
-                </td>
-                <td>
-                    {% if doc.link %}
-                        <a href="{{ doc.link }}" target="_blank">View</a>
-                    {% else %}
-                        Not submitted
-                    {% endif %}
-                </td>
-                <td>
-                    <form method="post" action="/change_status" id="form-{{ doc.id }}">
-                        <input type="hidden" name="doc_id" value="{{ doc.id }}">
-                        <button type="submit">Update</button>
-                    </form>
-                </td>
-            </tr>
+            {% for doc in docs %}
+                <tr {% if not doc.id %}style="color: #888; font-style: italic;"{% endif %}>
+                    <td>{{ doc.doc_type }}</td>
+
+                    <td>
+                        {% if doc.id %}
+                            <select name="new_status" form="form-{{ doc.id }}">
+                                <option value="pending_review" {% if doc.doc_status == 'pending_review' %}selected{% endif %}>Pending Review</option>
+                                <option value="approved" {% if doc.doc_status == 'approved' %}selected{% endif %}>Approved</option>
+                                <option value="action_required" {% if doc.doc_status == 'action_required' %}selected{% endif %}>Action Required</option>
+                            </select>
+                        {% else %}
+                            Not submitted
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if doc.expiry_date %}
+                            {{ doc.expiry_date }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if doc.link %}
+                            <a href="{{ doc.link }}" target="_blank">View</a>
+                        {% else %}
+                            Not submitted
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if doc.id %}
+                            <form method="post" action="/change_status" id="form-{{ doc.id }}">
+                                <input type="hidden" name="doc_id" value="{{ doc.id }}">
+                                <button type="submit">Update</button>
+                            </form>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                </tr>
             {% endfor %}
+
 
         </tbody>
     </table>

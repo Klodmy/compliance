@@ -552,7 +552,6 @@ def review_submission(token):
 
     db = get_db()
 
-
     # get information about submission to show admin for review
     submission = db.execute("""
     SELECT
@@ -571,9 +570,40 @@ def review_submission(token):
     WHERE requests.token = ?""", (token,)).fetchall()
 
     requirements = db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (submission[0]["requirement_set_id"],)).fetchall()
-    print(len(requirements))
 
-    return render_template("review_submission.html", submission=submission, requirements=requirements)
+
+    # gets all already submitted docs
+    submitted_lookup = {
+        doc["doc_type"]: doc for doc in submission if doc["id"]
+    }
+    
+    # list for rendering
+    docs_to_display = []
+
+    # loops through requirements for this submission
+    for req in requirements:
+        
+        # get each requested doc type
+        doc_type = req["doc_type"]
+        # looks for it in already submitted docs
+        doc = submitted_lookup.get(doc_type)
+
+        # if finds, adds it to docs to display
+        if doc:
+            docs_to_display.append(doc)
+
+        # if not, puts placeholder with temporary values to display
+        else:
+            docs_to_display.append({
+            "doc_type": doc_type,
+            "doc_status": "not_submitted",
+            "link": None,
+            "expiry_date": None,
+            "id": None
+        })
+
+
+    return render_template("review_submission.html", docs=docs_to_display)
 
 
 

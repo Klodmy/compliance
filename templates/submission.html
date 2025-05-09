@@ -3,21 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <title>Submit Required Documents</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+        }
+
+        .doc-block {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+
+        .locked {
+            color: gray;
+            font-style: italic;
+        }
+    </style>
 </head>
 <body>
+
     <h2>Submit Documents for Project</h2>
 
-    <form method="post" enctype="multipart/form-data">
-        {% for doc in required_docs %}
-            <div style="margin-bottom: 20px;">
-                <label><strong>{{ doc.doc_type }}</strong></label><br>
-                <input type="file" name="{{ doc.doc_type }}"><br>
+    {% for doc in required_docs %}
+    <div class="doc-block">
+        <strong>{{ doc["doc_type"] }}</strong><br>
+        {% set status = doc["doc_status"] if "doc_status" in doc else "MISSING" %}
+        Status: {{ status }}
+
+        {% if doc["link"] %}
+            <div>Current file: <a href="{{ doc["link"] }}" target="_blank">View submitted</a></div>
+        {% endif %}
+
+        {% if not doc["link"] or doc["doc_status"] == "action_required" %}
+            <form method="post" action="/submission/{{ doc_request['token'] }}" enctype="multipart/form-data">
+                <input type="file" name="{{ doc['doc_type'] }}" required><br>
                 <label>Expiry Date (if applicable):</label>
-                <input type="date" name="{{ doc.doc_type }}_expiry">
-            </div>
-        {% endfor %}
-        <button type="submit">Submit</button>
-    </form>
+                <input type="date" name="{{ doc['doc_type'] }}_expiry"><br>
+                <input type="hidden" name="doc_id" value="{{ doc['id'] }}">
+                <button type="submit">Upload</button>
+            </form>
+        {% else %}
+            <div class="locked">Submission locked — already submitted</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+
 </body>
 </html>
+
+
 

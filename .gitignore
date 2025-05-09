@@ -13,3 +13,6 @@ __pycache__/
 
 # Ignor file for tests
 test.py
+
+# Ignore uploads
+uploads

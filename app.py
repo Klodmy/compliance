@@ -255,12 +255,40 @@ def submission(token):
                 # saves the file
                 file.save(filepath)
 
+                # cleans up old doc submission in case re-submission is required
+                db.execute("DELETE FROM docs WHERE request_id = ? AND doc_type = ?", (doc_request["id"], doc_type))
+
                 # adds information about this submission to db
-                db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation, doc_type, request_id, admin_user_id) VALUES (?, ?, datetime('now'), ?, 'pending', ?, ?, ?)", (session['id'], filepath, expiry, doc_type, doc_request["id"], doc_request["admin_id"]))
+                db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation, doc_type, request_id, admin_user_id, doc_status) VALUES (?, ?, datetime('now'), ?, 'pending', ?, ?, ?, ?)", (session['id'], filepath, expiry, doc_type, doc_request["id"], doc_request["admin_id"], "pending_review"))
             
         db.commit()
+
+    # get submitted docs for this request
+    submitted_docs = db.execute("SELECT * FROM docs WHERE request_id = ?", (doc_request["id"],)).fetchall()
+
+    # turn into dict by doc_type
+    submitted_lookup = {doc["doc_type"]: dict(doc) for doc in submitted_docs}
+
+    # merge with required_docs
+    docs_to_display = []
+
+    for req in required_docs:
+        doc_type = req["doc_type"]
+        doc = submitted_lookup.get(doc_type)
+
+        if doc:
+            docs_to_display.append(doc)
+        else:
+            docs_to_display.append({
+                "doc_type": doc_type,
+                "doc_status": "not_submitted",
+                "link": None,
+                "expiry_date": None,
+                "id": None
+            })
+
         
-    return render_template("submission.html", doc_request=doc_request, required_docs=required_docs)
+    return render_template("submission.html", doc_request=doc_request, required_docs=docs_to_display)
 
 
 
@@ -574,7 +602,7 @@ def review_submission(token):
 
     # gets all already submitted docs
     submitted_lookup = {
-        doc["doc_type"]: doc for doc in submission if doc["id"]
+        doc["doc_type"]: dict(doc) for doc in submission if doc["id"]
     }
     
     # list for rendering
@@ -601,7 +629,6 @@ def review_submission(token):
             "expiry_date": None,
             "id": None
         })
-
 
     return render_template("review_submission.html", docs=docs_to_display)
 
@@ -633,7 +660,19 @@ def change_status():
         db.commit()
 
         # gets docs from this request and checks for the whole submission status
-        docs = db.execute("SELECT * FROM docs WHERE request_id = ?", (token['id'],)).fetchall()
+        #docs = db.execute("SELECT * FROM docs WHERE request_id = ?", (token['id'],)).fetchall()
+        docs = db.execute("""
+        SELECT
+            requirements.doc_type,
+            docs.link,
+            docs.doc_status,
+            requests.status
+        FROM requests
+        JOIN requirements ON requirements.set_id = requests.requirement_set_id
+        LEFT JOIN docs ON docs.request_id = requests.id AND docs.doc_type = requirements.doc_type
+        WHERE requests.id = ?
+        """, (token['id'],)).fetchall()
+        
         new_request_status = get_submission_status(docs)
 
         # updates submission status

@@ -101,19 +101,18 @@ def registration():
     if request.method == "POST":
 
         # getting new credentials 
+        company_name = request.form.get("company_name")
         login = request.form.get("login")
         password = request.form.get("password")
         password2 = request.form.get("password2")
         email = request.form.get("email")
-        name = request.form.get("name")
-        token = str(uuid.uuid4())
 
         # check if all gethered and password confirmed
         if login and password and password2 and email:
             if password == password2:
                 
                 # create new user in db
-                db.execute("INSERT INTO admin_users (login, password, email, name) VALUES (?, ?, ?, ?)", (login, password, email, name))
+                db.execute("INSERT INTO admin_users (login, password, email, name) VALUES (?, ?, ?, ?)", (company_name, login, password, email))
                 db.commit()
 
                 # sands back to login
@@ -142,6 +141,8 @@ def admin():
     if request.method == "POST":
 
         # request required data from a form
+        request_name = request.form.get("name")
+        description = request.form.get("description")
         project = request.form.get("project")
         sub = request.form.get("submitter")
         doc_set = request.form.get("set")
@@ -150,7 +151,7 @@ def admin():
         if project and sub and doc_set:
             
             # assigning this to variable in order to get ID later on
-            cur = db.execute("INSERT INTO requests (project_id, submitter_id, requirement_set_id, admin_id, token) VALUES (?, ?, ?, ?, ?)", (project, sub, doc_set, user_id, token))
+            cur = db.execute("INSERT INTO requests (name, description, project_id, submitter_id, requirement_set_id, admin_id, token) VALUES (?, ?, ?, ?, ?, ?, ?)", (request_name, description, project, sub, doc_set, user_id, token))
             db.commit()
 
             # gets ID of the last added row
@@ -183,7 +184,8 @@ def admin():
                             project.project_name, 
                             submitting_users.name, 
                             requests.status,
-                            requests.token
+                            requests.token,
+                            request.name
                         FROM requests
                         JOIN project ON requests.project_id = project.id
                         JOIN submitting_users ON requests.submitter_id = submitting_users.id
@@ -560,7 +562,7 @@ def submitter_dashboard():
         requests.admin_id,
         requests.token,
         requests.status,
-        admin_users.login AS gc_name,
+        admin_users.name AS gc_name,
         project.project_name
     FROM requests
     JOIN admin_users ON requests.admin_id = admin_users.id
@@ -681,3 +683,7 @@ def change_status():
 
     flash("Status updated successfully.")
     return redirect(f"/review_submission/{token['token']}")
+
+
+
+

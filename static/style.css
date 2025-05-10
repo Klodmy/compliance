@@ -1,0 +1,12 @@
+.badge-pending_review {
+    background-color: #f0ad4e;
+    color: white;
+}
+.badge-approved {
+    background-color: #5cb85c;
+    color: white;
+}
+.badge-action_required {
+    background-color: #d9534f;
+    color: white;
+}

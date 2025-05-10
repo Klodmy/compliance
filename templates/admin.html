@@ -28,6 +28,15 @@
 
     <h2>Request a Submittal</h2>
     <form method="POST">
+        <div style="margin-bottom: 15px;">
+            <label for="name"><strong>Request Name:</strong></label><br>
+            <input type="text" name="name" id="name" placeholder="e.g. H&S Docs" style="width: 30%;" required>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="description"><strong>Description (optional):</strong></label><br>
+            <textarea name="description" id="description" rows="3" style="width: 50%;" placeholder="Add any notes, context, or clarifications..."></textarea>
+        </div>
         <label for="project">Select Project:</label><br>
         <select name="project" required>
             {% for project in projects %}
@@ -75,7 +84,11 @@
         <td>{{ req.project_number }}</td>
         <td>{{ req.project_name }}</td>
         <td>{{ req.name }}</td>
-        <td>{{ req.status }}</td>
+        <td>
+            <span class="badge badge-{{ request.status }}">
+                 {{ req.status.replace("_", " ").title() }}
+        </span>
+        </td>
         <td> <a href="/review_submission/{{ req.token }}" target="_blank">Open</a></td>
     </tr>
     {% else %}

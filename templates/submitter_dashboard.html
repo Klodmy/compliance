@@ -27,6 +27,7 @@
 
     <table border="1" cellpadding="8" cellspacing="0">
         <tr>
+            <th>Submission Name</th>
             <th>Project</th>
             <th>Requested By</th>
             <th>Status</th>
@@ -34,6 +35,7 @@
         </tr>
         {% for req in sub_requests %}
         <tr>
+            <td>{{ req.request_name }}</td>
             <td>{{ req.project_name }}</td>
             <td>{{ req.gc_name }}</td>
             <td>{{ req.status.replace("_", " ").title() }}</td>

@@ -30,6 +30,16 @@
     </nav>
 
     <h2>Submit Documents for Project</h2>
+    
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+       <div class="flash-messages">
+        {% for message in messages %}
+        <div class="flash">{{ message }}</div>
+        {% endfor %}
+       </div>
+    {% endif %}
+    {% endwith %}
 
     {% for doc in required_docs %}
     <div class="doc-block">
@@ -38,7 +48,12 @@
         Status: {{ status.replace("_", " ").title() }}
 
         {% if doc["link"] %}
-            <div>Current file: <a href="{{ doc["link"] }}" target="_blank">View submitted</a></div>
+            <div>
+                Current file: <a href="{{ doc["link"] }}" target="_blank">View submitted</a>
+                <form method="post" action="/delete_doc/{{ doc['id'] }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this file?');">
+                    <button type="submit">Delete</button>
+                </form>
+            </div>
         {% endif %}
 
         {% if not doc["link"] or doc["doc_status"] == "action_required" %}

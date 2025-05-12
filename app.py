@@ -185,7 +185,7 @@ def admin():
                             submitting_users.name, 
                             requests.status,
                             requests.token,
-                            request.name
+                            requests.name as request_name
                         FROM requests
                         JOIN project ON requests.project_id = project.id
                         JOIN submitting_users ON requests.submitter_id = submitting_users.id
@@ -261,7 +261,7 @@ def submission(token):
                 db.execute("DELETE FROM docs WHERE request_id = ? AND doc_type = ?", (doc_request["id"], doc_type))
 
                 # adds information about this submission to db
-                db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation, doc_type, request_id, admin_user_id, doc_status) VALUES (?, ?, datetime('now'), ?, 'pending', ?, ?, ?, ?)", (session['id'], filepath, expiry, doc_type, doc_request["id"], doc_request["admin_id"], "pending_review"))
+                db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation, doc_type, request_id, admin_user_id, doc_status, filepath) VALUES (?, ?, datetime('now'), ?, 'pending', ?, ?, ?, ?, ?)", (session['id'], filepath, expiry, doc_type, doc_request["id"], doc_request["admin_id"], "pending_review", filepath))
             
         db.commit()
 
@@ -562,6 +562,7 @@ def submitter_dashboard():
         requests.admin_id,
         requests.token,
         requests.status,
+        requests.name as request_name,
         admin_users.name AS gc_name,
         project.project_name
     FROM requests
@@ -686,4 +687,46 @@ def change_status():
 
 
 
+# enables sub to delete file
+@app.route("/delete_doc/<doc_id>", methods=['POST'])
+def delete_doc(doc_id):
 
+    db = get_db()
+
+    # get's id of the submitter that uploaded the file
+    doc = db.execute("SELECT id, submitting_user_id, filepath FROM docs WHERE id = ?", (doc_id,)).fetchone()
+
+    # checks against currect session id and block unauthorized attempts
+    if not session.get("id") or session.get("id") != doc["submitting_user_id"]:
+        return "Unauthorized", 403
+    
+    else:
+        # get token of the submission of the file that is beigh deleted
+        token = db.execute("""
+                        SELECT
+                            requests.token
+                            FROM requests
+                            JOIN docs ON docs.request_id = requests.id
+                            WHERE docs.id = ?
+                            """, (doc_id,)).fetchone()
+        
+
+        # adds record of the deleted file to the db
+        db.execute("INSERT INTO deleted_docs (original_doc_id, submitter_id, filepath) VALUES (?, ?, ?)", (doc["id"], doc["submitting_user_id"], doc["filepath"]))
+
+        # deletes actual file
+        if doc and doc["filepath"]:
+            try:
+                os.remove(doc["filepath"])
+            except Exception as e:
+                print(f"Error deleting file: {e}")
+
+
+        # removes file from docs
+        db.execute("DELETE FROM docs WHERE id = ?", (doc_id,))
+        db.commit()
+
+        flash("Document deleted successfully.")
+
+        return redirect(f"/submission/{token['token']}")
+    

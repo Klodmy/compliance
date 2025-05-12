@@ -73,6 +73,7 @@
 
     <table border="1" cellpadding="8" cellspacing="0">
         <tr>
+            <th>Submission Name</th>
             <th>Project number</th>
             <th>Project name</th>
             <th>Submitter</th>
@@ -81,6 +82,7 @@
         </tr>
     {% for req in this_req %}
     <tr>
+        <td>{{ req.request_name }}</td>
         <td>{{ req.project_number }}</td>
         <td>{{ req.project_name }}</td>
         <td>{{ req.name }}</td>

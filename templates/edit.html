@@ -18,10 +18,20 @@
         <p>Select the documents required for this set:</p>
 
         {% for doc in all_docs %}
-            <label>
-                <input type="checkbox" name="{{ doc.name }}" {% if doc.name in current_set %}checked{% endif %}>
-                {{ doc.name }}
-            </label><br>
+            <div style="margin-bottom: 10px;">
+                <label>
+                    <input type="checkbox" name="{{ doc.name }}" {% if doc.name in current_set %}checked{% endif %}>
+                    {{ doc.name }}
+                </label>
+
+                {% if doc.name in current_set %}
+                    <label style="margin-left: 15px;">
+                        Required?
+                        <input type="checkbox" name="is_required_{{ doc.name }}"
+                               {% if current_set[doc.name] %}checked{% endif %}>
+                    </label>
+                {% endif %}
+            </div>
         {% endfor %}
 
         <br>
@@ -35,3 +45,4 @@
 
 </body>
 </html>
+

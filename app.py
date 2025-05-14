@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 import secrets
 from werkzeug.utils import secure_filename
 
+### INITIATON, SETTINGS, CONSTANTS ###
+
 app = Flask(__name__)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.secret_key = "mysecret"
@@ -29,11 +31,9 @@ def get_db():
 
 
 
-#main page
-@app.route("/", methods=['GET', 'POST'])
-def main():
-    return redirect("/login")
 
+
+### ADMIN REGISTRATION AND LOGIN ###
 
 
 
@@ -72,8 +72,6 @@ def login():
 
 
 
-
-
 @app.route("/logout")
 def logout():
 
@@ -87,7 +85,6 @@ def logout():
     else:
         session.clear()
         return redirect("/")
-
 
 
 
@@ -124,7 +121,19 @@ def registration():
 
 
 
-# main operational page for gc
+
+### ADMIN CONTROLS - DASHBOARD, ADDING SUBMITTERS, DOCUMENTS, SETS, PROJECTS, REQUESTS ###
+
+
+
+#main page
+@app.route("/", methods=['GET', 'POST'])
+def main():
+    return redirect("/login")
+
+
+
+# administrator dashboard
 @app.route("/admin", methods=['GET', 'POST'])
 def admin():
 
@@ -171,6 +180,8 @@ def admin():
 
             return redirect("/admin")
     
+
+
    # getting admin, submitters, projects
     user = db.execute("SELECT * FROM admin_users WHERE id = ?", (session["id"],)).fetchone()
     subs = db.execute("SELECT * FROM submitting_users WHERE invited_by = ?", (session["id"],)).fetchall()
@@ -196,6 +207,254 @@ def admin():
 
 
 
+# submitters management
+@app.route("/my_submitters", methods=['GET', 'POST'])
+def my_submitters():
+
+    # redirect if not logged in as admin
+    if not session.get("admin"):
+        return redirect("/login")
+
+    db = get_db()
+    user_id = session.get("id")
+
+    if request.method == "POST":
+
+        # creating token and requesting new invited user's email
+        new_token = str(uuid.uuid4())
+        name = request.form.get("name")
+        email = request.form.get("email")
+
+
+        # adding new user dummy data
+        db.execute("INSERT INTO submitting_users (login, password, email, token, invited_by, name) VALUES (?, ?, ?, ?, ?, ?)", (str(randint(1, 1000)), str(randint(1, 1000)), email, new_token, user_id, name))
+        db.commit()
+        flash(f"Submitter {name} was successfully added.")
+        return redirect("/my_submitters")
+    
+    # get existing submitters
+    submitters = db.execute("SELECT name, email, token FROM submitting_users WHERE invited_by = ?", (user_id,)).fetchall()
+
+    return render_template("my_submitters.html", submitters=submitters)
+
+
+
+# documents management
+@app.route("/documents_library", methods=['GET', 'POST'])
+def documents_library():
+
+    # redirect if not logged in as admin
+    if not session.get("admin"):
+        return redirect("/login")
+
+    # call db, get user id
+    db = get_db()
+    user_id = session.get("id")
+
+    if request.method == "POST":
+
+        # get doc name and description
+        doc_name = request.form.get("doc_name")
+        doc_description = request.form.get("doc_description")
+
+        # insert results into db
+        db.execute("INSERT INTO users_docs (name, description, user_id) VALUES (?, ?, ?)", (doc_name, doc_description, user_id))
+        db.commit()
+        
+        # redirects to updated page
+        return redirect("/documents_library")
+
+    # get existing docs to display
+    docs = db.execute("SELECT name, description FROM users_docs WHERE user_id  = ?", (user_id,)).fetchall()
+    return render_template("documents_library.html", docs=docs)
+
+
+
+# sets management
+@app.route("/my_sets", methods=['GET', 'POST'])
+def my_sets():
+
+    # redirect if not logged in as admin
+    if not session.get("admin"):
+        return redirect("/login")
+
+    db = get_db()
+
+    # gets current user id
+    user_id = session["id"]
+
+    if request.method == "POST":
+
+        requirement_set = request.form.get("new_set_name")
+
+        db.execute("INSERT INTO requirement_sets (admin_user_id, name) VALUES (?, ?)", (user_id, requirement_set))
+        db.commit()
+
+    
+    # gets all doc sets this user has
+    doc_sets = db.execute("SELECT id, name FROM requirement_sets WHERE admin_user_id = ?", (user_id, )).fetchall()
+
+    # loops through requirement sets and gets docs in them and adds to the dict
+    docs_by_set = {}
+
+    for doc_set in doc_sets:
+        set_id = doc_set["id"]
+        docs = db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (set_id,)).fetchall()
+        docs_by_set[set_id] = docs
+
+    return render_template("my_sets.html", doc_sets=doc_sets, docs_by_set=docs_by_set)
+
+
+
+# individual set eddition
+@app.route("/my_sets/<set_id>", methods=['GET', 'POST'])
+def edit_set(set_id):
+
+    # redirect if not logged in as admin
+    if not session.get("admin"):
+        return redirect("/login")
+
+    db = get_db()
+    user_id = session.get("id")
+
+    # get docs created by user
+    all_docs = db.execute("SELECT * FROM users_docs WHERE user_id = ?", (user_id,)).fetchall()
+
+    if request.method == "POST":
+
+        # deletes previous required docs if any
+        db.execute("DELETE FROM requirements WHERE set_id = ?", (set_id,))
+
+        selected = {}
+
+        for doc in all_docs:
+            if request.form.get(doc["name"]):
+
+                # checks if added doc is required during submission
+                is_required = request.form.get(f"is_required_{doc['name']}") == "on"
+
+                selected[doc["name"]] = int(is_required)
+            
+
+        # inserting chosen docs in the set db
+        for doc_name, is_required in selected.items():
+            db.execute("INSERT INTO requirements (set_id, doc_type, is_required) VALUES (?, ?, ?)", (set_id, doc_name, is_required))
+        
+        # push collected to db
+        db.commit()
+        return redirect("/my_sets")
+    
+    current_set = []
+    
+    this_set = db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (set_id,)).fetchall()
+    for doc in this_set:
+        current_set.append(doc["doc_type"])
+
+    return render_template("edit.html", current_set=current_set, all_docs=all_docs)
+
+
+
+# projects management
+@app.route("/projects", methods=['GET', 'POST'])
+def projects():
+
+    # redirect if not logged in as admin
+    if not session.get("admin"):
+        return redirect("/login")
+    
+    # call db, get user id
+    db = get_db()
+    user_id = session.get("id")
+
+    if request.method == "POST":
+        
+        # get project number and name through the form
+        project_number = request.form.get("project_number")
+        project_name = request.form.get("project_name")
+
+        # add to the db
+        db.execute("INSERT INTO project (project_number, project_name, project_admin_id) VALUES (?, ?, ?)", (project_number, project_name, user_id))
+        db.commit()
+
+        # refresh page
+        return redirect("/projects")
+    
+    # get existing projects
+    projects = db.execute("SELECT project_number, project_name FROM project WHERE project_admin_id = ?", (user_id,)).fetchall()
+    
+    return render_template("projects.html", projects=projects)
+
+
+
+# submission assessment
+@app.route("/review_submission/<token>")
+def review_submission(token):
+
+    # redirect if not logged in as admin
+    if not session.get("admin"):
+        return redirect("/login")
+
+    db = get_db()
+
+    # get information about submission to show admin for review
+    submission = db.execute("""
+    SELECT
+        project.project_number,
+        project.project_name,
+        requests.submitter_id,
+        requests.token,
+        requests.status,
+        requests.requirement_set_id,
+        submitting_users.name,
+        docs.*
+    FROM requests
+    JOIN project ON requests.project_id = project.id
+    JOIN submitting_users ON requests.submitter_id = submitting_users.id
+    LEFT JOIN docs ON docs.request_id = requests.id
+    WHERE requests.token = ?""", (token,)).fetchall()
+
+    requirements = db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (submission[0]["requirement_set_id"],)).fetchall()
+
+
+    # gets all already submitted docs
+    submitted_lookup = {
+        doc["doc_type"]: dict(doc) for doc in submission if doc["id"]
+    }
+    
+    # list for rendering
+    docs_to_display = []
+
+    # loops through requirements for this submission
+    for req in requirements:
+        
+        # get each requested doc type
+        doc_type = req["doc_type"]
+        # looks for it in already submitted docs
+        doc = submitted_lookup.get(doc_type)
+
+        # if finds, adds it to docs to display
+        if doc:
+            docs_to_display.append(doc)
+
+        # if not, puts placeholder with temporary values to display
+        else:
+            docs_to_display.append({
+            "doc_type": doc_type,
+            "doc_status": "not_submitted",
+            "link": None,
+            "expiry_date": None,
+            "id": None
+        })
+
+    return render_template("review_submission.html", docs=docs_to_display)
+
+
+
+
+
+### ADMIN HELPER ROUTES ###
+
+
 
 # removes sub from the db when "delete" button is hit
 @app.route("/delete_sub", methods=['POST'])
@@ -217,8 +476,166 @@ def delete_sub():
 
 
 
+# changes status of the reveiewed document and status of the submission in general
+@app.route("/change_status", methods=['POST'])
+def change_status():
 
-# page for the submission of the documents by the request
+    db = get_db()
+
+    # get updated status and document id
+    new_status = request.form.get("new_status")
+    doc_id = request.form.get("doc_id")
+
+
+    token = db.execute("""
+    SELECT
+        requests.token,
+        requests.id
+    FROM requests
+    JOIN docs ON docs.request_id = requests.id
+    WHERE docs.id = ?    
+    """, (doc_id,)).fetchone()
+
+    # if provided update db
+    if new_status and doc_id:
+
+        db.execute("UPDATE docs SET doc_status = ? WHERE id = ?", (new_status, doc_id))
+        db.commit()
+
+        # gets docs from this request and checks for the whole submission status
+        #docs = db.execute("SELECT * FROM docs WHERE request_id = ?", (token['id'],)).fetchall()
+        docs = db.execute("""
+        SELECT
+            requirements.doc_type,
+            docs.link,
+            docs.doc_status,
+            requests.status
+        FROM requests
+        JOIN requirements ON requirements.set_id = requests.requirement_set_id
+        LEFT JOIN docs ON docs.request_id = requests.id AND docs.doc_type = requirements.doc_type
+        WHERE requests.id = ?
+        """, (token['id'],)).fetchall()
+        
+        new_request_status = get_submission_status(docs)
+
+        # updates submission status
+        db.execute("UPDATE requests SET status = ? WHERE id = ?", (new_request_status, token['id']))
+        db.commit()
+
+    flash("Status updated successfully.")
+    return redirect(f"/review_submission/{token['token']}")
+
+
+
+
+### SUBMITTER REGISTRATION AND LOGIN ###
+
+
+
+@app.route("/submitter_registration/<token>", methods=["GET", "POST"])
+def submitter_registration(token):
+
+    db = get_db()
+    submitter = db.execute("SELECT * FROM submitting_users WHERE token = ?", (token,)).fetchone()
+
+    if request.method == "POST":
+
+        # getting new credentials 
+        login = request.form.get("login")
+        password = request.form.get("password")
+        password2 = request.form.get("password2")
+
+        if login and password and password2 and submitter:
+            if password == password2:
+                
+            # create new user in db
+                db.execute("UPDATE submitting_users SET login = ?, password = ? WHERE token = ?", (login, password, token))
+                db.commit()
+
+                # sands back to login
+                return redirect("/submitter_login")
+
+    # rendering registration page       
+    return render_template("submitter_registration.html")
+
+
+
+@app.route("/submitter_login", methods=["GET", "POST"])
+def submitter_login():
+
+    # calls db
+    db = get_db()
+
+    if request.method == "POST":
+        
+        # request information through forms
+        login = request.form.get("login")
+        password = request.form.get("password")
+
+        user = db.execute("SELECT * FROM submitting_users WHERE login = ?", (login,)).fetchone()
+
+        if user and password == user["password"]:
+
+            # initiating session
+            session["submitter"] = True
+            session["id"] = user["id"]
+
+            # redirect to sub dashboard
+            return redirect("/submitter_dashboard")
+        
+        else:
+            flash("Login or password is invalid.")
+            return redirect("/submitter_login")
+        
+    return render_template("submitter_login.html")
+
+
+
+
+
+### SUBMITTER CONTROLS - DASHBOARD, SUBMISSION ###
+
+
+@app.route("/submitter_dashboard", methods=['GET', 'POST'])
+def submitter_dashboard():
+
+    # redirect if not logged in as admin
+    if not session.get("submitter"):
+        return redirect("/login")
+
+    # db call, gets admin's id
+    db = get_db()
+    submitter_id = session.get("id")
+    
+
+    # redirect if not logged in
+    if not submitter_id and not session.get("submitter"):
+        return redirect("/submitter_login")
+
+    # get submitter
+    submitter = db.execute("SELECT * FROM submitting_users WHERE id = ?", (submitter_id,)).fetchone()
+
+    # get information about request to display
+    sub_requests = db.execute("""
+    SELECT 
+        requests.project_id,
+        requests.admin_id,
+        requests.token,
+        requests.status,
+        requests.name as request_name,
+        admin_users.name AS gc_name,
+        project.project_name
+    FROM requests
+    JOIN admin_users ON requests.admin_id = admin_users.id
+    JOIN project ON requests.project_id = project.id
+    WHERE requests.submitter_id = ?
+""", (submitter_id,)).fetchall()
+
+    return render_template("submitter_dashboard.html", submitter=submitter, sub_requests=sub_requests)
+
+
+
+    # page for the submission of the documents by the request
 @app.route("/submission/<token>", methods=['GET', 'POST'])
 def submission(token):
 
@@ -295,395 +712,8 @@ def submission(token):
 
 
 
-# sets management
-@app.route("/my_sets", methods=['GET', 'POST'])
-def my_sets():
 
-    # redirect if not logged in as admin
-    if not session.get("admin"):
-        return redirect("/login")
-
-    db = get_db()
-
-    # gets current user id
-    user_id = session["id"]
-
-    if request.method == "POST":
-
-        requirement_set = request.form.get("new_set_name")
-
-        db.execute("INSERT INTO requirement_sets (admin_user_id, name) VALUES (?, ?)", (user_id, requirement_set))
-        db.commit()
-
-    
-    # gets all doc sets this user has
-    doc_sets = db.execute("SELECT id, name FROM requirement_sets WHERE admin_user_id = ?", (user_id, )).fetchall()
-
-    # loops through requirement sets and gets docs in them and adds to the dict
-    docs_by_set = {}
-
-    for doc_set in doc_sets:
-        set_id = doc_set["id"]
-        docs = db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (set_id,)).fetchall()
-        docs_by_set[set_id] = docs
-
-    return render_template("my_sets.html", doc_sets=doc_sets, docs_by_set=docs_by_set)
-
-
-
-
-@app.route("/my_sets/<set_id>", methods=['GET', 'POST'])
-def edit_set(set_id):
-
-    # redirect if not logged in as admin
-    if not session.get("admin"):
-        return redirect("/login")
-
-    db = get_db()
-    user_id = session.get("id")
-
-    # get docs created by user
-    all_docs = db.execute("SELECT * FROM users_docs WHERE user_id = ?", (user_id,)).fetchall()
-
-    if request.method == "POST":
-
-        # deletes previous required docs if any
-        db.execute("DELETE FROM requirements WHERE set_id = ?", (set_id,))
-
-        selected = []
-        
-        # looping through all possible docs, if it is selected adds it to this set
-        for doc in all_docs:
-            if request.form.get(doc["name"]):
-                selected.append(doc["name"])
-
-        # inserting chosen docs in the set db
-        for selected_doc in selected:
-            db.execute("INSERT INTO requirements (set_id, doc_type) VALUES (?, ?)", (set_id, selected_doc))
-        
-        # push collected to db
-        db.commit()
-        return redirect("/my_sets")
-    
-    
-    current_set = []
-    
-    this_set = db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (set_id,)).fetchall()
-    for doc in this_set:
-        current_set.append(doc["doc_type"])
-
-    
-
-    return render_template("edit.html", current_set=current_set, all_docs=all_docs)
-
-
-
-
-@app.route("/documents_library", methods=['GET', 'POST'])
-def documents_library():
-
-    # redirect if not logged in as admin
-    if not session.get("admin"):
-        return redirect("/login")
-
-    # call db, get user id
-    db = get_db()
-    user_id = session.get("id")
-
-    if request.method == "POST":
-
-        # get doc name and description
-        doc_name = request.form.get("doc_name")
-        doc_description = request.form.get("doc_description")
-
-        # insert results into db
-        db.execute("INSERT INTO users_docs (name, description, user_id) VALUES (?, ?, ?)", (doc_name, doc_description, user_id))
-        db.commit()
-        
-        # redirects to updated page
-        return redirect("/documents_library")
-
-    # get existing docs to display
-    docs = db.execute("SELECT name, description FROM users_docs WHERE user_id  = ?", (user_id,)).fetchall()
-    return render_template("documents_library.html", docs=docs)
-
-
-
-@app.route("/projects", methods=['GET', 'POST'])
-def projects():
-
-    # redirect if not logged in as admin
-    if not session.get("admin"):
-        return redirect("/login")
-    
-    # call db, get user id
-    db = get_db()
-    user_id = session.get("id")
-
-    if request.method == "POST":
-        
-        # get project number and name through the form
-        project_number = request.form.get("project_number")
-        project_name = request.form.get("project_name")
-
-        # add to the db
-        db.execute("INSERT INTO project (project_number, project_name, project_admin_id) VALUES (?, ?, ?)", (project_number, project_name, user_id))
-        db.commit()
-
-        # refresh page
-        return redirect("/projects")
-    
-    # get existing projects
-    projects = db.execute("SELECT project_number, project_name FROM project WHERE project_admin_id = ?", (user_id,)).fetchall()
-    
-    return render_template("projects.html", projects=projects)
-
-
-
-
-@app.route("/my_submitters", methods=['GET', 'POST'])
-def my_submitters():
-
-    # redirect if not logged in as admin
-    if not session.get("admin"):
-        return redirect("/login")
-
-    db = get_db()
-    user_id = session.get("id")
-
-    if request.method == "POST":
-
-        # creating token and requesting new invited user's email
-        new_token = str(uuid.uuid4())
-        name = request.form.get("name")
-        email = request.form.get("email")
-
-
-        # adding new user dummy data
-        db.execute("INSERT INTO submitting_users (login, password, email, token, invited_by, name) VALUES (?, ?, ?, ?, ?, ?)", (str(randint(1, 1000)), str(randint(1, 1000)), email, new_token, user_id, name))
-        db.commit()
-        flash(f"Submitter {name} was successfully added.")
-        return redirect("/my_submitters")
-    
-    # get existing submitters
-    submitters = db.execute("SELECT name, email, token FROM submitting_users WHERE invited_by = ?", (user_id,)).fetchall()
-
-    return render_template("my_submitters.html", submitters=submitters)
-
-
-
-
-
-@app.route("/submitter_registration/<token>", methods=["GET", "POST"])
-def submitter_registration(token):
-
-    db = get_db()
-    submitter = db.execute("SELECT * FROM submitting_users WHERE token = ?", (token,)).fetchone()
-
-    if request.method == "POST":
-
-        # getting new credentials 
-        login = request.form.get("login")
-        password = request.form.get("password")
-        password2 = request.form.get("password2")
-
-        if login and password and password2 and submitter:
-            if password == password2:
-                
-            # create new user in db
-                db.execute("UPDATE submitting_users SET login = ?, password = ? WHERE token = ?", (login, password, token))
-                db.commit()
-
-                # sands back to login
-                return redirect("/submitter_login")
-
-    # rendering registration page       
-    return render_template("submitter_registration.html")
-
-
-
-
-
-
-@app.route("/submitter_login", methods=["GET", "POST"])
-def submitter_login():
-
-    # calls db
-    db = get_db()
-
-    if request.method == "POST":
-        
-        # request information through forms
-        login = request.form.get("login")
-        password = request.form.get("password")
-
-        user = db.execute("SELECT * FROM submitting_users WHERE login = ?", (login,)).fetchone()
-
-        if user and password == user["password"]:
-
-            # initiating session
-            session["submitter"] = True
-            session["id"] = user["id"]
-
-            # redirect to sub dashboard
-            return redirect("/submitter_dashboard")
-        
-        else:
-            flash("Login or password is invalid.")
-            return redirect("/submitter_login")
-        
-    return render_template("submitter_login.html")
-        
-
-
-@app.route("/submitter_dashboard", methods=['GET', 'POST'])
-def submitter_dashboard():
-
-    # redirect if not logged in as admin
-    if not session.get("submitter"):
-        return redirect("/login")
-
-    # db call, gets admin's id
-    db = get_db()
-    submitter_id = session.get("id")
-    
-
-    # redirect if not logged in
-    if not submitter_id and not session.get("submitter"):
-        return redirect("/submitter_login")
-
-    # get submitter
-    submitter = db.execute("SELECT * FROM submitting_users WHERE id = ?", (submitter_id,)).fetchone()
-
-    # get information about request to display
-    sub_requests = db.execute("""
-    SELECT 
-        requests.project_id,
-        requests.admin_id,
-        requests.token,
-        requests.status,
-        requests.name as request_name,
-        admin_users.name AS gc_name,
-        project.project_name
-    FROM requests
-    JOIN admin_users ON requests.admin_id = admin_users.id
-    JOIN project ON requests.project_id = project.id
-    WHERE requests.submitter_id = ?
-""", (submitter_id,)).fetchall()
-
-    return render_template("submitter_dashboard.html", submitter=submitter, sub_requests=sub_requests)
-
-
-@app.route("/review_submission/<token>")
-def review_submission(token):
-
-    # redirect if not logged in as admin
-    if not session.get("admin"):
-        return redirect("/login")
-
-    db = get_db()
-
-    # get information about submission to show admin for review
-    submission = db.execute("""
-    SELECT
-        project.project_number,
-        project.project_name,
-        requests.submitter_id,
-        requests.token,
-        requests.status,
-        requests.requirement_set_id,
-        submitting_users.name,
-        docs.*
-    FROM requests
-    JOIN project ON requests.project_id = project.id
-    JOIN submitting_users ON requests.submitter_id = submitting_users.id
-    LEFT JOIN docs ON docs.request_id = requests.id
-    WHERE requests.token = ?""", (token,)).fetchall()
-
-    requirements = db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (submission[0]["requirement_set_id"],)).fetchall()
-
-
-    # gets all already submitted docs
-    submitted_lookup = {
-        doc["doc_type"]: dict(doc) for doc in submission if doc["id"]
-    }
-    
-    # list for rendering
-    docs_to_display = []
-
-    # loops through requirements for this submission
-    for req in requirements:
-        
-        # get each requested doc type
-        doc_type = req["doc_type"]
-        # looks for it in already submitted docs
-        doc = submitted_lookup.get(doc_type)
-
-        # if finds, adds it to docs to display
-        if doc:
-            docs_to_display.append(doc)
-
-        # if not, puts placeholder with temporary values to display
-        else:
-            docs_to_display.append({
-            "doc_type": doc_type,
-            "doc_status": "not_submitted",
-            "link": None,
-            "expiry_date": None,
-            "id": None
-        })
-
-    return render_template("review_submission.html", docs=docs_to_display)
-
-
-
-@app.route("/change_status", methods=['POST'])
-def change_status():
-
-    db = get_db()
-
-    # get updated status and document id
-    new_status = request.form.get("new_status")
-    doc_id = request.form.get("doc_id")
-
-
-    token = db.execute("""
-    SELECT
-        requests.token,
-        requests.id
-    FROM requests
-    JOIN docs ON docs.request_id = requests.id
-    WHERE docs.id = ?    
-    """, (doc_id,)).fetchone()
-
-    # if provided update db
-    if new_status and doc_id:
-
-        db.execute("UPDATE docs SET doc_status = ? WHERE id = ?", (new_status, doc_id))
-        db.commit()
-
-        # gets docs from this request and checks for the whole submission status
-        #docs = db.execute("SELECT * FROM docs WHERE request_id = ?", (token['id'],)).fetchall()
-        docs = db.execute("""
-        SELECT
-            requirements.doc_type,
-            docs.link,
-            docs.doc_status,
-            requests.status
-        FROM requests
-        JOIN requirements ON requirements.set_id = requests.requirement_set_id
-        LEFT JOIN docs ON docs.request_id = requests.id AND docs.doc_type = requirements.doc_type
-        WHERE requests.id = ?
-        """, (token['id'],)).fetchall()
-        
-        new_request_status = get_submission_status(docs)
-
-        # updates submission status
-        db.execute("UPDATE requests SET status = ? WHERE id = ?", (new_request_status, token['id']))
-        db.commit()
-
-    flash("Status updated successfully.")
-    return redirect(f"/review_submission/{token['token']}")
+### SUBMITTER HELPER ROUTES ###
 
 
 
@@ -730,3 +760,12 @@ def delete_doc(doc_id):
 
         return redirect(f"/submission/{token['token']}")
     
+
+
+
+
+
+
+
+
+

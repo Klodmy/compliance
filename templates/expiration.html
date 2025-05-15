@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Expiring Documents</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 60%;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        th {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Expiring or Expired Documents (Next 7 Days)</h2>
+
+    {% if expiring %}
+    <table>
+        <thead>
+            <tr>
+                <th>Document Type</th>
+                <th>Expiry Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for doc in expiring %}
+            <tr>
+                <td>{{ doc["doc_type"] }}</td>
+                <td>{{ doc["expiry_date"] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <p>No documents are expiring soon.</p>
+    {% endif %}
+
+</body>
+</html>

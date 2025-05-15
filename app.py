@@ -6,6 +6,7 @@ import os
 from random import randint
 from dotenv import load_dotenv
 import secrets
+from datetime import date, timedelta, datetime
 from werkzeug.utils import secure_filename
 
 ### INITIATON, SETTINGS, CONSTANTS ###
@@ -344,11 +345,11 @@ def edit_set(set_id):
         db.commit()
         return redirect("/my_sets")
     
-    current_set = []
+    current_set = {}
     
-    this_set = db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (set_id,)).fetchall()
+    this_set = db.execute("SELECT doc_type, is_required FROM requirements WHERE set_id = ?", (set_id,)).fetchall()
     for doc in this_set:
-        current_set.append(doc["doc_type"])
+        current_set[doc["doc_type"]] = doc["is_required"]
 
     return render_template("edit.html", current_set=current_set, all_docs=all_docs)
 
@@ -447,6 +448,50 @@ def review_submission(token):
         })
 
     return render_template("review_submission.html", docs=docs_to_display)
+
+
+@app.route("/expiration", methods=['GET', 'POST'])
+def expiration():
+
+    # call db
+    db = get_db()
+
+    # get current user
+    user_id = session.get("id")
+
+    # get current user docs
+    docs = db.execute("SELECT * FROM docs WHERE admin_user_id = ?", (user_id,)).fetchall()
+
+    delta = date.today() + timedelta(days=7)
+
+    # list for expiring/ed docs
+    expiring = []
+
+    for doc in docs:
+        
+        # trying to format datestamp to yyyy-mm-dd format
+        try:
+            expiry = datetime.strptime(doc["expiry_date"], "%Y-%m-%d").date()
+            
+            # if doc will expire in 7 or less days, or already has been expired
+            if expiry <= delta:
+                # adding to the list
+                expiring.append(doc)
+
+            # skip if not expiring
+            else:
+                pass
+        # print errors
+        except Exception as e:         
+            print(f"Skipping invalid expiry date: {doc['expiry_date']}")
+            
+    
+    # sorts the list by expiry date, putting closest/oldest first
+    expiring.sort(key=lambda doc: datetime.strptime(doc["expiry_date"], "%Y-%m-%d").date())
+                
+    return render_template("expiration.html", expiring=expiring)
+
+
 
 
 

@@ -3,58 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Submitted Documents</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background-color: #f4f4f4;
-        }
-
-        h2 {
-            color: #333;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: #fff;
-            box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
-        }
-
-        thead {
-            background-color: #333;
-            color: #fff;
-        }
-
-        th, td {
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            text-align: left;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-
-        a {
-            color: #007bff;
-            text-decoration: none;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-
-        .status {
-            font-weight: bold;
-            text-transform: capitalize;
-        }
-
-        .status.pending-submission { color: #999; }
-        .status.pending-review { color: #f0ad4e; }
-        .status.approved { color: #5cb85c; }
-        .status.action-required { color: #d9534f; }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     

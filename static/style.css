@@ -1,12 +1,100 @@
-.badge-pending_review {
-    background-color: #f0ad4e;
-    color: white;
+/* Global styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 40px;
+    background-color: #f4f4f4;
+    color: #333;
 }
-.badge-approved {
-    background-color: #5cb85c;
-    color: white;
+
+nav {
+    background-color: #f0f0f0;
+    padding: 10px;
+    margin-bottom: 20px;
 }
-.badge-action_required {
-    background-color: #d9534f;
-    color: white;
+
+nav a {
+    margin-right: 15px;
+    text-decoration: none;
+    color: #007bff;
 }
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+h1, h2, h3 {
+    color: #333;
+}
+
+button {
+    padding: 8px 14px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fff;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
+}
+
+thead {
+    background-color: #333;
+    color: #fff;
+}
+
+th, td {
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* Document block style */
+.doc-block {
+    border: 1px solid #ccc;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    background-color: #fff;
+}
+
+.locked {
+    color: gray;
+    font-style: italic;
+}
+
+/* Flash messages */
+.flash-messages {
+    margin-top: 15px;
+}
+
+.flash {
+    background-color: #ffffcc;
+    border: 1px solid #ffeb3b;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+}
+
+/* Status colors */
+.status {
+    font-weight: bold;
+    text-transform: capitalize;
+}
+.status.pending-submission { color: #999; }
+.status.pending-review { color: #f0ad4e; }
+.status.approved { color: #5cb85c; }
+.status.action-required { color: #d9534f; }

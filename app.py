@@ -169,15 +169,33 @@ def admin():
 
             # get data to send email
             user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
+            company_name = db.execute("SELECT name FROM admin_users WHERE id = ?", (user_id,)).fetchone()
             submitter_email = db.execute("SELECT email FROM submitting_users WHERE id = ?", (sub,)).fetchone()
             the_project = db.execute("SELECT project_name FROM project WHERE id = ?", (project,)).fetchone()
             sub_token = db.execute("SELECT token FROM submitting_users WHERE id = ?", (sub,)).fetchone()
 
-            # body of the emai in case reveiving app does not render html
+            # body of the email in case reveiving browser does not render html
             body = f"You have a submittal request from {user_name['login']}. Please follow the following link to login: http://127.0.0.1:5000/submitter_login"
 
+            # html body of the email
+            html_body = (
+            f"""
+                <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+                        <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
+                            <h2 style="color: #444;">You have a new submittal request from <span style="color: #007bff;">{company_name}</span></h2>
+                            <p>Please log in to your dashboard to review the request.</p>
+                            <a href="http://127.0.0.1:5000/submitter_registration/{sub_token}"
+                            tyle="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Login to Dashboard</a>
+                        </div>
+                    </body>
+                </html>
+                """
+            )
+
+
             # sends an email
-            send_email(user_name["login"], submitter_email["email"], f"Submittals request for {the_project['project_name']}", body, email_password, sub_token['token'])
+            send_email(submitter_email["email"], f"Submittals request for {the_project['project_name']}", body, html_body, email_password)
 
             return redirect("/admin")
     
@@ -258,15 +276,22 @@ def documents_library():
         doc_name = request.form.get("doc_name")
         doc_description = request.form.get("doc_description")
 
+        # verifies if checkbox of expiry required is checked
+        if request.form.get("expiry_required") == "on":
+            expiry_required = 1
+        else:
+            expiry_required = 0
+
         # insert results into db
-        db.execute("INSERT INTO users_docs (name, description, user_id) VALUES (?, ?, ?)", (doc_name, doc_description, user_id))
+        db.execute("INSERT INTO users_docs (name, description, expiry_required, user_id) VALUES (?, ?, ?, ?)", (doc_name, doc_description, expiry_required, user_id))
         db.commit()
         
         # redirects to updated page
         return redirect("/documents_library")
 
     # get existing docs to display
-    docs = db.execute("SELECT name, description FROM users_docs WHERE user_id  = ?", (user_id,)).fetchall()
+    docs = db.execute("SELECT id, name, description, expiry_required FROM users_docs WHERE user_id  = ?", (user_id,)).fetchall()
+
     return render_template("documents_library.html", docs=docs)
 
 
@@ -430,6 +455,7 @@ def review_submission(token):
         
         # get each requested doc type
         doc_type = req["doc_type"]
+
         # looks for it in already submitted docs
         doc = submitted_lookup.get(doc_type)
 
@@ -518,6 +544,17 @@ def delete_sub():
         db.commit()
         
     return redirect("/my_submitters")
+
+
+@app.route("/del_doc/<id>", methods=['POST'])
+def del_doc(id):
+
+    db = get_db()
+
+    db.execute("DELETE FROM users_docs WHERE id = ?", (id,))
+    db.commit()
+
+    return redirect("/documents_library")
 
 
 
@@ -727,6 +764,9 @@ def submission(token):
             
         db.commit()
 
+    # get project name to display
+    project_name = db.execute("SELECT project_name FROM project WHERE id = ?", (doc_request["project_id"],)).fetchone()
+
     # get submitted docs for this request
     submitted_docs = db.execute("SELECT * FROM docs WHERE request_id = ?", (doc_request["id"],)).fetchall()
 
@@ -752,7 +792,7 @@ def submission(token):
             })
 
         
-    return render_template("submission.html", doc_request=doc_request, required_docs=docs_to_display)
+    return render_template("submission.html", project_name=project_name, doc_request=doc_request, required_docs=docs_to_display)
 
 
 

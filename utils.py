@@ -15,27 +15,13 @@ def ex_check(name, allowed):
 
 
 # connects to gmail and sends an email
-def send_email(send_from, send_to, subject, body, password, token):
+def send_email(send_to, subject, body, html_body, password):
     email = EmailMessage()
     email["From"] = "dk.ads24@gmail.com"
     email["To"] = send_to
     email["Subject"] = subject
     email.set_content(body)
-    email.add_alternative(
-        f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
-                <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
-                    <h2 style="color: #444;">You have a new submittal request from <span style="color: #007bff;">{send_from}</span></h2>
-                    <p>Please log in to your dashboard to review the request.</p>
-                    <a href="http://127.0.0.1:5000/submitter_registration/{token}"
-                    tyle="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Login to Dashboard</a>
-                </div>
-            </body>
-        </html>
-        """,
-    subtype="html"
-    )
+    email.add_alternative(html_body, subtype="html")
     
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smpt:
         smpt.login("dk.ads24@gmail.com", password)
@@ -48,7 +34,7 @@ def get_submission_status(docs):
     submitted_with_files = []
     approved = []
 
-    # checks number of submitted docs
+    # checks number of submitted docs and approved docs, returns action required if at least 1 doc has this status
     for doc in docs:
         if doc['link']:
             submitted_with_files.append(doc)
@@ -60,20 +46,20 @@ def get_submission_status(docs):
             return "action_required"
         
 
+    # if non docs submitted 
     if len(submitted_with_files) == 0:
-        print("1")
         return "pending_submission"
     
+    # if submitted less then requested
     elif len(submitted_with_files) < len(docs):
-        print("2")
         return "partially_submitted"
     
+    # if all docs are approved
     elif len(approved) == len(docs):
-        print("3")
         return "approved"
     
+    # other cases
     else:
-        print("4")
         return "pending_review"
     
     

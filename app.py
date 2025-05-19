@@ -186,7 +186,7 @@ def admin():
                             <h2 style="color: #444;">You have a new submittal request from <span style="color: #007bff;">{company_name}</span></h2>
                             <p>Please log in to your dashboard to review the request.</p>
                             <a href="http://127.0.0.1:5000/submitter_registration/{sub_token}"
-                            tyle="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Login to Dashboard</a>
+                            style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Login to Dashboard</a>
                         </div>
                     </body>
                 </html>
@@ -572,7 +572,9 @@ def change_status():
     token = db.execute("""
     SELECT
         requests.token,
-        requests.id
+        requests.id,
+        requests.submitter_id,
+        requests.name
     FROM requests
     JOIN docs ON docs.request_id = requests.id
     WHERE docs.id = ?    
@@ -603,6 +605,27 @@ def change_status():
         # updates submission status
         db.execute("UPDATE requests SET status = ? WHERE id = ?", (new_request_status, token['id']))
         db.commit()
+
+        #sends an email
+        submitter_email = db.execute("SELECT email FROM submitting_users WHERE id = ?", (token['submitter_id'],)).fetchone()
+        subject = f"Status Update: Request {token['name']}"
+        text_body = f"Your submission {token['name']} status was updated to {new_request_status}"
+        html_body = (
+            f"""
+                <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+                        <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
+                            <h2 style="color: #444;">Status of your submission has been updated.</span></h2>
+                            <p>Request {token['name']} status changed to {new_request_status.replace('_', ' ').title()}. Please login to review the submission.</p>
+                            <a href="http://127.0.0.1:5000/submitter_login"
+                            style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Login to Dashboard</a>
+                        </div>
+                    </body>
+                </html>
+                """
+            )
+
+        send_email(submitter_email["email"], subject, text_body, html_body, email_password)
 
     flash("Status updated successfully.")
     return redirect(f"/review_submission/{token['token']}")

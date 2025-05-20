@@ -412,68 +412,133 @@ def projects():
 
 
 
-# submission assessment
-@app.route("/review_submission/<token>")
+@app.route("/review_submission/<token>", methods=["GET", "POST"])
 def review_submission(token):
-
-    # redirect if not logged in as admin
+    # Ensure admin access
     if not session.get("admin"):
         return redirect("/login")
 
     db = get_db()
 
-    # get information about submission to show admin for review
+    # Get submission info
     submission = db.execute("""
-    SELECT
-        project.project_number,
-        project.project_name,
-        requests.submitter_id,
-        requests.token,
-        requests.status,
-        requests.requirement_set_id,
-        submitting_users.name,
-        docs.*
-    FROM requests
-    JOIN project ON requests.project_id = project.id
-    JOIN submitting_users ON requests.submitter_id = submitting_users.id
-    LEFT JOIN docs ON docs.request_id = requests.id
-    WHERE requests.token = ?""", (token,)).fetchall()
+        SELECT
+            project.project_number,
+            project.project_name,
+            requests.submitter_id,
+            requests.token,
+            requests.status,
+            requests.requirement_set_id,
+            submitting_users.name AS submitter_name,
+            docs.*
+        FROM requests
+        JOIN project ON requests.project_id = project.id
+        JOIN submitting_users ON requests.submitter_id = submitting_users.id
+        LEFT JOIN docs ON docs.request_id = requests.id
+        WHERE requests.token = ?
+    """, (token,)).fetchall()
 
-    requirements = db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (submission[0]["requirement_set_id"],)).fetchall()
+    if not submission:
+        flash("Submission not found.")
+        return redirect("/admin")
 
+    # Get list of required doc types
+    requirement_set_id = submission[0]["requirement_set_id"]
+    requirements = db.execute(
+        "SELECT doc_type FROM requirements WHERE set_id = ?",
+        (requirement_set_id,)
+    ).fetchall()
 
-    # gets all already submitted docs
+    # Map submitted docs by doc_type for lookup
     submitted_lookup = {
         doc["doc_type"]: dict(doc) for doc in submission if doc["id"]
     }
-    
-    # list for rendering
+
+    # Prepare docs to display (submitted or placeholders)
     docs_to_display = []
-
-    # loops through requirements for this submission
     for req in requirements:
-        
-        # get each requested doc type
         doc_type = req["doc_type"]
-
-        # looks for it in already submitted docs
         doc = submitted_lookup.get(doc_type)
-
-        # if finds, adds it to docs to display
         if doc:
             docs_to_display.append(doc)
-
-        # if not, puts placeholder with temporary values to display
         else:
             docs_to_display.append({
-            "doc_type": doc_type,
-            "doc_status": "not_submitted",
-            "link": None,
-            "expiry_date": None,
-            "id": None
-        })
+                "doc_type": doc_type,
+                "doc_status": "not_submitted",
+                "link": None,
+                "expiry_date": None,
+                "id": None
+            })
 
-    return render_template("review_submission.html", docs=docs_to_display)
+    # Handle form submission
+    if request.method == "POST":
+        updated_doc_ids = []
+
+        for doc in docs_to_display:
+            doc_id = doc.get("id")
+            if doc_id:
+                new_status = request.form.get(f"status_{doc_id}")
+                if new_status:
+                    try:
+                        db.execute("UPDATE docs SET doc_status = ? WHERE id = ?", (new_status, doc_id))
+                        updated_doc_ids.append(doc_id)
+                    except Exception as e:
+                        print(f"Failed to update doc {doc_id}: {e}")
+
+        db.commit()
+
+        # Get request ID for status update
+        request_id = db.execute(
+            "SELECT id FROM requests WHERE token = ?", (token,)
+        ).fetchone()["id"]
+
+        # Recalculate overall request status
+        docs = db.execute("""
+            SELECT
+                requirements.doc_type,
+                docs.link,
+                docs.doc_status,
+                requests.status
+            FROM requests
+            JOIN requirements ON requirements.set_id = requests.requirement_set_id
+            LEFT JOIN docs ON docs.request_id = requests.id AND docs.doc_type = requirements.doc_type
+            WHERE requests.id = ?
+        """, (request_id,)).fetchall()
+
+        new_status = get_submission_status(docs)
+        db.execute("UPDATE requests SET status = ? WHERE id = ?", (new_status, request_id))
+        db.commit()
+
+        # Email the submitter
+        request_info = db.execute("SELECT name, submitter_id FROM requests WHERE id = ?", (request_id,)).fetchone()
+        submitter_email = db.execute("SELECT email FROM submitting_users WHERE id = ?", (request_info["submitter_id"],)).fetchone()
+
+        subject = f"Status Update: Request {request_info['name']}"
+        text_body = f"Your submission {request_info['name']} status was updated to {new_status}."
+
+        html_body = f"""
+            <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+                    <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
+                        <h2>Status Update</h2>
+                        <p>The status of your submission <strong>{request_info['name']}</strong> has been updated to <strong>{new_status.replace("_", " ").title()}</strong>.</p>
+                        <p>Please log in to your dashboard to view the details.</p>
+                        <a href="http://127.0.0.1:5000/submitter_login"
+                            style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+                            Go to Dashboard
+                        </a>
+                    </div>
+                </body>
+            </html>
+        """
+
+        send_email(submitter_email["email"], subject, text_body, html_body, email_password)
+
+        flash("Review finalized. Submission status updated and email sent.")
+        return redirect(f"/review_submission/{token}")
+
+    return render_template("review_submission.html", docs=docs_to_display, token=token)
+
 
 
 @app.route("/expiration", methods=['GET', 'POST'])
@@ -587,7 +652,6 @@ def change_status():
         db.commit()
 
         # gets docs from this request and checks for the whole submission status
-        #docs = db.execute("SELECT * FROM docs WHERE request_id = ?", (token['id'],)).fetchall()
         docs = db.execute("""
         SELECT
             requirements.doc_type,
@@ -600,6 +664,7 @@ def change_status():
         WHERE requests.id = ?
         """, (token['id'],)).fetchall()
         
+        # get's submission status based on statuses of each separate doc
         new_request_status = get_submission_status(docs)
 
         # updates submission status
@@ -616,7 +681,7 @@ def change_status():
                     <body style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
                         <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
                             <h2 style="color: #444;">Status of your submission has been updated.</span></h2>
-                            <p>Request {token['name']} status changed to {new_request_status.replace('_', ' ').title()}. Please login to review the submission.</p>
+                            <p>Request <strong>{token['name']}</strong> status changed to {new_request_status.replace('_', ' ').title()}. Please login to review the submission.</p>
                             <a href="http://127.0.0.1:5000/submitter_login"
                             style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Login to Dashboard</a>
                         </div>

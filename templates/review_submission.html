@@ -2,93 +2,124 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Submitted Documents</title>
+    <title>Review Submission</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .doc-section {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+        }
+
+        .doc-section p {
+            margin: 5px 0;
+        }
+
+        select {
+            padding: 5px;
+            border-radius: 4px;
+        }
+
+        .not-submitted {
+            color: red;
+            font-weight: bold;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .flash {
+            background-color: #dff0d8;
+            color: #3c763d;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #d6e9c6;
+            border-radius: 4px;
+        }
+
+        nav {
+            background-color: #f0f0f0;
+            padding: 10px;
+            margin-bottom: 30px;
+        }
+
+        nav a {
+            margin-right: 15px;
+            text-decoration: none;
+            color: #333;
+            font-weight: bold;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
-    
 
-
-    <nav style="background-color: #f0f0f0; padding: 10px;">
-        <a href="/admin" style="margin-right: 15px;">Dashboard</a>
-        <a href="/my_submitters" style="margin-right: 15px;">My Submitters</a>
-        <a href="/documents_library" style="margin-right: 15px;">Documents Library</a>
-        <a href="/my_sets" style="margin-right: 15px;">Requirement Sets</a>
-        <a href="/projects" style="margin-right: 15px;">Projects</a>
+    <nav>
+        <a href="/admin">Dashboard</a>
+        <a href="/my_submitters">My Submitters</a>
+        <a href="/documents_library">Documents Library</a>
+        <a href="/my_sets">Requirement Sets</a>
+        <a href="/projects">Projects</a>
         <a href="/logout">Log Out</a>
     </nav>
 
-    <h2>Submitted Documents</h2>
+    <h1>Review Submission</h1>
 
     {% with messages = get_flashed_messages() %}
-    {% if messages %}
-       <div class="flash-messages">
-        {% for message in messages %}
-        <div class="flash">{{ message }}</div>
-        {% endfor %}
-       </div>
-    {% endif %}
+        {% if messages %}
+            <div class="flash">
+                {% for message in messages %}
+                    {{ message }}
+                {% endfor %}
+            </div>
+        {% endif %}
     {% endwith %}
 
-    <table>
-        <thead>
-            <tr>
-                <th>Document Type</th>
-                <th>Status</th>
-                <th>Expiry Date</th>
-                <th>File</th>
-                <th>Update</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for doc in docs %}
-                <tr {% if not doc.id %}style="color: #888; font-style: italic;"{% endif %}>
-                    <td>{{ doc.doc_type }}</td>
+    <form method="POST">
+        {% for doc in docs %}
+            <div class="doc-section">
+                <p><strong>Document Type:</strong> {{ doc.doc_type }}</p>
 
-                    <td>
-                        {% if doc.id %}
-                            <select name="new_status" form="form-{{ doc.id }}">
-                                <option value="pending_review" {% if doc.doc_status == 'pending_review' %}selected{% endif %}>Pending Review</option>
-                                <option value="approved" {% if doc.doc_status == 'approved' %}selected{% endif %}>Approved</option>
-                                <option value="action_required" {% if doc.doc_status == 'action_required' %}selected{% endif %}>Action Required</option>
-                            </select>
-                        {% else %}
-                            Not submitted
-                        {% endif %}
-                    </td>
+                {% if doc.id and doc.link %}
+                    <p><strong>Current Status:</strong> {{ doc.doc_status.replace('_', ' ').title() }}</p>
+                    <p><a href="{{ doc.link }}" target="_blank">View Document</a></p>
 
-                    <td>
-                        {% if doc.expiry_date %}
-                            {{ doc.expiry_date }}
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
+                    <label for="status_{{ doc.id }}">Update Status:</label>
+                    <select name="status_{{ doc.id }}" id="status_{{ doc.id }}">
+                        <option value="pending" {% if doc.doc_status == "pending" %}selected{% endif %}>Pending</option>
+                        <option value="approved" {% if doc.doc_status == "approved" %}selected{% endif %}>Approved</option>
+                        <option value="rejected" {% if doc.doc_status == "rejected" %}selected{% endif %}>Rejected</option>
+                        <option value="action_required" {% if doc.doc_status == "action_required" %}selected{% endif %}>Action Required</option>
+                    </select>
+                {% else %}
+                    <p class="not-submitted">This document has not been submitted.</p>
+                {% endif %}
+            </div>
+        {% endfor %}
 
-                    <td>
-                        {% if doc.link %}
-                            <a href="{{ doc.link }}" target="_blank">View</a>
-                        {% else %}
-                            Not submitted
-                        {% endif %}
-                    </td>
-
-                    <td>
-                        {% if doc.id %}
-                            <form method="post" action="/change_status" id="form-{{ doc.id }}">
-                                <input type="hidden" name="doc_id" value="{{ doc.id }}">
-                                <button type="submit">Update</button>
-                            </form>
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-                </tr>
-            {% endfor %}
-
-
-        </tbody>
-    </table>
+        <button type="submit">Finalize Review</button>
+    </form>
 
 </body>
 </html>

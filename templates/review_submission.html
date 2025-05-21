@@ -104,6 +104,7 @@
                 {% if doc.id and doc.link %}
                     <p><strong>Current Status:</strong> {{ doc.doc_status.replace('_', ' ').title() }}</p>
                     <p><a href="{{ doc.link }}" target="_blank">View Document</a></p>
+                    <p><strong>Revision:</strong> Rev {{ doc.revision or 0 }}</p>
 
                     <label for="status_{{ doc.id }}">Update Status:</label>
                     <select name="status_{{ doc.id }}" id="status_{{ doc.id }}">

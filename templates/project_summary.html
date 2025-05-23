@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Project Summary</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <nav>
+        <a href="/admin">Dashboard</a>
+        <a href="/projects">Projects</a>
+        <a href="/logout">Log Out</a>
+    </nav>
+
+    <h2>Project Submissions Summary</h2>
+
+    {% if submissions %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Request Name</th>
+                    <th>Submitter</th>
+                    <th>Status</th>
+                    <th>Link</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sub in submissions %}
+                    <tr>
+                        <td>{{ sub.name }}</td>
+                        <td>{{ sub['submitting_users.name'] }}</td>
+                        <td class="status {{ sub.status|replace(' ', '-') }}">{{ sub.status.replace('_', ' ').title() }}</td>
+                        <td><a href="{{ url_for('review_submission', token=sub.token) }}">Review</a></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No submissions found for this project.</p>
+    {% endif %}
+
+</body>
+</html>

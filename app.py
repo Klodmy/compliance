@@ -212,6 +212,7 @@ def admin():
                         SELECT 
                             project.project_number, 
                             project.project_name, 
+                            project.id,
                             submitting_users.name, 
                             requests.status,
                             requests.token,
@@ -414,13 +415,14 @@ def projects():
 
 @app.route("/review_submission/<token>", methods=["GET", "POST"])
 def review_submission(token):
-    # Ensure admin access
+
+    # check for admin 
     if not session.get("admin"):
         return redirect("/login")
 
     db = get_db()
 
-    # Get submission info
+    # get required submission info
     submission = db.execute("""
         SELECT
             project.project_number,
@@ -442,19 +444,19 @@ def review_submission(token):
         flash("Submission not found.")
         return redirect("/admin")
 
-    # Get list of required doc types
+    # get list of required doc types
     requirement_set_id = submission[0]["requirement_set_id"]
     requirements = db.execute(
         "SELECT doc_type FROM requirements WHERE set_id = ?",
         (requirement_set_id,)
     ).fetchall()
 
-    # Map submitted docs by doc_type for lookup
+    # map submitted docs by doc_type for lookup
     submitted_lookup = {
         doc["doc_type"]: dict(doc) for doc in submission if doc["id"]
     }
 
-    # Prepare docs to display (submitted or placeholders)
+    # prepare docs to display (submitted or placeholders)
     docs_to_display = []
     for req in requirements:
         doc_type = req["doc_type"]
@@ -470,7 +472,7 @@ def review_submission(token):
                 "id": None
             })
 
-    # Handle form submission
+    # handle form submission
     if request.method == "POST":
         updated_doc_ids = []
 
@@ -487,12 +489,12 @@ def review_submission(token):
 
         db.commit()
 
-        # Get request ID for status update
+        # get request ID for status update
         request_id = db.execute(
             "SELECT id FROM requests WHERE token = ?", (token,)
         ).fetchone()["id"]
 
-        # Recalculate overall request status
+        # recalculate overall request status
         docs = db.execute("""
             SELECT
                 requirements.doc_type,
@@ -509,7 +511,7 @@ def review_submission(token):
         db.execute("UPDATE requests SET status = ? WHERE id = ?", (new_status, request_id))
         db.commit()
 
-        # Email the submitter
+        # email the submitter
         request_info = db.execute("SELECT name, submitter_id FROM requests WHERE id = ?", (request_id,)).fetchone()
         submitter_email = db.execute("SELECT email FROM submitting_users WHERE id = ?", (request_info["submitter_id"],)).fetchone()
 
@@ -540,7 +542,7 @@ def review_submission(token):
     return render_template("review_submission.html", docs=docs_to_display, token=token)
 
 
-
+# review expiring docs
 @app.route("/expiration", methods=['GET', 'POST'])
 def expiration():
 
@@ -610,7 +612,7 @@ def delete_sub():
         
     return redirect("/my_submitters")
 
-
+# delete docs from library
 @app.route("/del_doc/<id>", methods=['POST'])
 def del_doc(id):
 
@@ -622,80 +624,35 @@ def del_doc(id):
     return redirect("/documents_library")
 
 
-
-# changes status of the reveiewed document and status of the submission in general
-@app.route("/change_status", methods=['POST'])
-def change_status():
+# review all submission of a project
+@app.route("/project_summary/<id>")
+def project_summary(id):
 
     db = get_db()
 
-    # get updated status and document id
-    new_status = request.form.get("new_status")
-    doc_id = request.form.get("doc_id")
+    user = db.execute("SELECT project_admin_id FROM project WHERE id = ?", (id,)).fetchone()
 
-
-    token = db.execute("""
+    if not user or session.get("id") != user["project_admin_id"]:
+        return redirect("/login")
+    
+    submissions = db.execute(
+        """
     SELECT
-        requests.token,
-        requests.id,
-        requests.submitter_id,
-        requests.name
+    project.project_name,
+    project.project_number,
+    requests.name,
+    requests.token,
+    requests.status,
+    requests.submitter_id,
+    submitting_users.name
     FROM requests
-    JOIN docs ON docs.request_id = requests.id
-    WHERE docs.id = ?    
-    """, (doc_id,)).fetchone()
-
-    # if provided update db
-    if new_status and doc_id:
-
-        db.execute("UPDATE docs SET doc_status = ? WHERE id = ?", (new_status, doc_id))
-        db.commit()
-
-        # gets docs from this request and checks for the whole submission status
-        docs = db.execute("""
-        SELECT
-            requirements.doc_type,
-            docs.link,
-            docs.doc_status,
-            requests.status
-        FROM requests
-        JOIN requirements ON requirements.set_id = requests.requirement_set_id
-        LEFT JOIN docs ON docs.request_id = requests.id AND docs.doc_type = requirements.doc_type
-        WHERE requests.id = ?
-        """, (token['id'],)).fetchall()
-        
-        # get's submission status based on statuses of each separate doc
-        new_request_status = get_submission_status(docs)
-
-        # updates submission status
-        db.execute("UPDATE requests SET status = ? WHERE id = ?", (new_request_status, token['id']))
-        db.commit()
-
-        #sends an email
-        submitter_email = db.execute("SELECT email FROM submitting_users WHERE id = ?", (token['submitter_id'],)).fetchone()
-        subject = f"Status Update: Request {token['name']}"
-        text_body = f"Your submission {token['name']} status was updated to {new_request_status}"
-        html_body = (
-            f"""
-                <html>
-                    <body style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
-                        <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
-                            <h2 style="color: #444;">Status of your submission has been updated.</span></h2>
-                            <p>Request <strong>{token['name']}</strong> status changed to {new_request_status.replace('_', ' ').title()}. Please login to review the submission.</p>
-                            <a href="http://127.0.0.1:5000/submitter_login"
-                            style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Login to Dashboard</a>
-                        </div>
-                    </body>
-                </html>
-                """
-            )
-
-        send_email(submitter_email["email"], subject, text_body, html_body, email_password)
-
-    flash("Status updated successfully.")
-    return redirect(f"/review_submission/{token['token']}")
+    JOIN project ON project.id = requests.project_id
+    JOIN submitting_users ON submitting_users.id = requests.submitter_id
+    WHERE project.id = ?
+    """, (id)).fetchall()
 
 
+    return render_template("project_summary.html", submissions=submissions)
 
 
 ### SUBMITTER REGISTRATION AND LOGIN ###
@@ -830,7 +787,7 @@ def submission(token):
         for doc in required_docs:
             # getting doc type
             doc_type = doc["doc_type"]
-            # gets the actual file
+            # gets the file
             file = request.files.get(doc_type)
 
             # checks if there is file, it has name and extension is allowed
@@ -844,11 +801,17 @@ def submission(token):
                 # saves the file
                 file.save(filepath)
 
+                # gets doc revision
+                revision = db.execute("SELECT revision FROM docs WHERE request_id = ? and doc_type = ?", (doc_request['id'], doc_type)).fetchone()
+                
+
+                rev = revision["revision"] + 1 if revision else 0
+
                 # cleans up old doc submission in case re-submission is required
                 db.execute("DELETE FROM docs WHERE request_id = ? AND doc_type = ?", (doc_request["id"], doc_type))
 
                 # adds information about this submission to db
-                db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation, doc_type, request_id, admin_user_id, doc_status, filepath) VALUES (?, ?, datetime('now'), ?, 'pending', ?, ?, ?, ?, ?)", (session['id'], filepath, expiry, doc_type, doc_request["id"], doc_request["admin_id"], "pending_review", filepath))
+                db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation, doc_type, request_id, admin_user_id, doc_status, filepath, revision) VALUES (?, ?, datetime('now'), ?, 'pending', ?, ?, ?, ?, ?, ?)", (session['id'], filepath, expiry, doc_type, doc_request["id"], doc_request["admin_id"], "pending_review", filepath, rev))
             
         db.commit()
 

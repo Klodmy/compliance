@@ -77,7 +77,7 @@
     <tr>
         <td>{{ req.request_name }}</td>
         <td>{{ req.project_number }}</td>
-        <td>{{ req.project_name }}</td>
+        <td><a href="/project_summary/{{ req.id }}">{{ req.project_name }}</a></td>
         <td>{{ req.name }}</td>
         <td>
             <span class="badge badge-{{ request.status }}">

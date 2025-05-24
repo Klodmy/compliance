@@ -480,9 +480,10 @@ def review_submission(token):
             doc_id = doc.get("id")
             if doc_id:
                 new_status = request.form.get(f"status_{doc_id}")
+                new_comment = request.form.get(f"comment_{doc_id}")
                 if new_status:
                     try:
-                        db.execute("UPDATE docs SET doc_status = ? WHERE id = ?", (new_status, doc_id))
+                        db.execute("UPDATE docs SET doc_status = ?, comment = ? WHERE id = ?", (new_status, new_comment, doc_id))
                         updated_doc_ids.append(doc_id)
                     except Exception as e:
                         print(f"Failed to update doc {doc_id}: {e}")
@@ -804,11 +805,13 @@ def submission(token):
                 # gets doc revision
                 revision = db.execute("SELECT revision FROM docs WHERE request_id = ? and doc_type = ?", (doc_request['id'], doc_type)).fetchone()
                 
+                if revision:
+                    rev = revision["revision"] + 1
+                    # cleans up old doc submission in case re-submission is required
+                    db.execute("DELETE FROM docs WHERE request_id = ? AND doc_type = ?", (doc_request["id"], doc_type))
 
-                rev = revision["revision"] + 1 if revision else 0
-
-                # cleans up old doc submission in case re-submission is required
-                db.execute("DELETE FROM docs WHERE request_id = ? AND doc_type = ?", (doc_request["id"], doc_type))
+                else:
+                    rev = 0
 
                 # adds information about this submission to db
                 db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation, doc_type, request_id, admin_user_id, doc_status, filepath, revision) VALUES (?, ?, datetime('now'), ?, 'pending', ?, ?, ?, ?, ?, ?)", (session['id'], filepath, expiry, doc_type, doc_request["id"], doc_request["admin_id"], "pending_review", filepath, rev))

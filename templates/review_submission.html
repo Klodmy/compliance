@@ -100,19 +100,20 @@
         {% for doc in docs %}
             <div class="doc-section">
                 <p><strong>Document Type:</strong> {{ doc.doc_type }}</p>
-
                 {% if doc.id and doc.link %}
                     <p><strong>Current Status:</strong> {{ doc.doc_status.replace('_', ' ').title() }}</p>
                     <p><a href="{{ doc.link }}" target="_blank">View Document</a></p>
                     <p><strong>Revision:</strong> Rev {{ doc.revision or 0 }}</p>
-
                     <label for="status_{{ doc.id }}">Update Status:</label>
                     <select name="status_{{ doc.id }}" id="status_{{ doc.id }}">
-                        <option value="pending" {% if doc.doc_status == "pending" %}selected{% endif %}>Pending</option>
+                        <option value="pending_review" {% if doc.doc_status == "pending_review" %}selected{% endif %}>Pending Review</option>
                         <option value="approved" {% if doc.doc_status == "approved" %}selected{% endif %}>Approved</option>
-                        <option value="rejected" {% if doc.doc_status == "rejected" %}selected{% endif %}>Rejected</option>
                         <option value="action_required" {% if doc.doc_status == "action_required" %}selected{% endif %}>Action Required</option>
                     </select>
+                    <div>
+                        <label for="comment_{{ doc.id }}">Comment:</label><br>
+                        <textarea name="comment_{{ doc.id }}" rows="2" cols="40" placeholder="Comment...">{{ doc.comment or '' }}</textarea>
+                    </div>
                 {% else %}
                     <p class="not-submitted">This document has not been submitted.</p>
                 {% endif %}
@@ -125,3 +126,16 @@
 </body>
 </html>
 
+
+<script>
+function toggleComment(docId) {
+  const select = document.getElementById(`status_${docId}`);
+  const commentBox = document.getElementById(`comment_box_${docId}`);
+
+  if (select.value === "action_required") {
+    commentBox.style.display = "block";
+  } else {
+    commentBox.style.display = "none";
+  }
+}
+</script>

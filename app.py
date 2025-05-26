@@ -110,7 +110,7 @@ def registration():
             if password == password2:
                 
                 # create new user in db
-                db.execute("INSERT INTO admin_users (login, password, email, name) VALUES (?, ?, ?, ?)", (company_name, login, password, email))
+                db.execute("INSERT INTO admin_users (name, login, password, email) VALUES (?, ?, ?, ?)", (company_name, login, password, email))
                 db.commit()
 
                 # sands back to login
@@ -185,7 +185,7 @@ def admin():
                         <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
                             <h2 style="color: #444;">You have a new submittal request from <span style="color: #007bff;">{company_name}</span></h2>
                             <p>Please log in to your dashboard to review the request.</p>
-                            <a href="http://127.0.0.1:5000/submitter_registration/{sub_token}"
+                            <a href="http://127.0.0.1:5000/submitter_registration/{sub_token['token']}"
                             style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Login to Dashboard</a>
                         </div>
                     </body>
@@ -773,6 +773,9 @@ def submission(token):
     # get data of the request
     doc_request = db.execute("SELECT * FROM requests WHERE token = ?", (token,)).fetchone()
 
+    # get project name to display
+    project_name = db.execute("SELECT project_name FROM project WHERE id = ?", (doc_request["project_id"],)).fetchone()
+
     # check in case token is not valid
     if not doc_request:
         return "Invalid token", 404
@@ -815,11 +818,36 @@ def submission(token):
 
                 # adds information about this submission to db
                 db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation, doc_type, request_id, admin_user_id, doc_status, filepath, revision) VALUES (?, ?, datetime('now'), ?, 'pending', ?, ?, ?, ?, ?, ?)", (session['id'], filepath, expiry, doc_type, doc_request["id"], doc_request["admin_id"], "pending_review", filepath, rev))
-            
+
         db.commit()
 
-    # get project name to display
-    project_name = db.execute("SELECT project_name FROM project WHERE id = ?", (doc_request["project_id"],)).fetchone()
+        # email to admin
+        sub = db.execute("SELECT name FROM submitting_users WHERE id = ?", (session.get('id'),)).fetchone()
+        admin = db.execute("SELECT * FROM admin_users WHERE id = ?", (doc_request['admin_id'],)).fetchone()
+
+
+        subject = f"Documents submitted: Request {doc_request['name']} for {project_name['project_name']}"
+        text_body = f"Documents submitted: Request {doc_request['name']} for {project_name['project_name']}"
+
+        html_body = f"""
+            <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+                    <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
+                        <h2>Submission Completed</h2>
+                        <p>Submission <strong>{doc_request['name']}</strong> for the project <strong>{project_name['project_name']}</strong> has been completed by <strong>{sub['name']}.</strong> </p>
+                        <p>Please log in to your dashboard to view the details.</p>
+                        <a href="http://127.0.0.1:5000/login"
+                            style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+                            Go to Dashboard
+                        </a>
+                    </div>
+                </body>
+            </html>
+        """
+
+        send_email(admin['email'], subject, text_body, html_body, email_password)
+
+
 
     # get submitted docs for this request
     submitted_docs = db.execute("SELECT * FROM docs WHERE request_id = ?", (doc_request["id"],)).fetchall()
@@ -845,6 +873,7 @@ def submission(token):
                 "id": None
             })
 
+    
         
     return render_template("submission.html", project_name=project_name, doc_request=doc_request, required_docs=docs_to_display)
 

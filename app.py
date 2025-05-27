@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 import secrets
 from datetime import date, timedelta, datetime
 from werkzeug.utils import secure_filename
+from apscheduler.schedulers.background import BackgroundScheduler
+import atexit
 
 ### INITIATON, SETTINGS, CONSTANTS ###
 
@@ -656,6 +658,8 @@ def project_summary(id):
     return render_template("project_summary.html", submissions=submissions)
 
 
+
+
 ### SUBMITTER REGISTRATION AND LOGIN ###
 
 
@@ -931,9 +935,183 @@ def delete_doc(doc_id):
 
 
 
+@app.route("/test_expiry")
+def test_expiry():
+    expiry_notification()
+    return "Expiry check triggered."
+
+
+
+
+def expiry_notification():
+
+    db = get_db()
+
+    today = date.today()
+
+    docs = db.execute("""
+        SELECT
+            docs.id,
+            docs.doc_type,
+            docs.expiry_date,
+            admin_users.name AS admin_name,
+            admin_users.email AS admin_email,
+            submitting_users.name AS sub_name,
+            submitting_users.email AS sub_email,
+            requests.id AS req_id,
+            requests.name AS request_name,
+            requests.token
+        FROM docs
+            JOIN admin_users ON admin_users.id = docs.admin_user_id
+            JOIN submitting_users ON submitting_users.id = docs.submitting_user_id
+            JOIN requests ON requests.id = docs.request_id
+        """)
+    
+    for doc in docs:
+
+        # tries to format expiry date
+        try:
+            expiry = datetime.strptime(doc["expiry_date"], "%Y-%m-%d").date()
+
+        # if fails - skips the doc
+        except(ValueError, TypeError):
+            continue
+
+
+        if expiry == today + timedelta(days=7):
+
+
+            # email warning to admin
+
+            subject = f"Document {doc['doc_type']} submitted for {doc['request_name']} is about to expire."
+            text_body = f"Document {doc['doc_type']} submitted for {doc['request_name']} is about to expire."
+
+            html_body = f"""
+                <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+                        <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
+                            <h2>Document is about to expire.</h2>
+                            <p>Document <strong>{doc['doc_type']}</strong> submitted by <strong>{doc['sub_name']}</strong> for <strong>{doc['request_name']}</strong> is about to expire.</p>
+                            <p>Please log in to your dashboard to view the details.</p>
+                            <a href="http://127.0.0.1:5000/login"
+                                style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+                                Go to Dashboard
+                            </a>
+                        </div>
+                    </body>
+                </html>
+            """
+
+            send_email(doc['admin_email'], subject, text_body, html_body, email_password)
+
+        # email warning to sub
+
+            subject = f"Document {doc['doc_type']} submitted for {doc['request_name']} is about to expire."
+            text_body = f"Document {doc['doc_type']} submitted for {doc['request_name']} is about to expire."
+
+            html_body = f"""
+                <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+                        <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
+                            <h2>Document is about to expire.</h2>
+                            <p>Document <strong>{doc['doc_type']}</strong> submitted to <strong>{doc['admin_name']}</strong> for <strong>{doc['request_name']}</strong> is about to expire.</p>
+                            <p>Please log in to your dashboard to view the details.</p>
+                            <a href="http://127.0.0.1:5000/submitter_login"
+                                style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+                                Go to Dashboard
+                            </a>
+                        </div>
+                    </body>
+                </html>
+            """
+
+            send_email(doc['sub_email'], subject, text_body, html_body, email_password)
+
+            # updates expiring doc status to action required
+            db.execute("UPDATE docs SET doc_status = ? WHERE id = ?", ('action_required', doc['id']))
+
+
+            # recalculate overall request status
+            docs = db.execute("""
+                SELECT
+                    requirements.doc_type,
+                    docs.link,
+                    docs.doc_status,
+                    requests.status
+                FROM requests
+                JOIN requirements ON requirements.set_id = requests.requirement_set_id
+                LEFT JOIN docs ON docs.request_id = requests.id AND docs.doc_type = requirements.doc_type
+                WHERE requests.id = ?
+            """, (doc['req_id'],)).fetchall()
+
+            # gets full request status and updates it
+            submission_status = get_submission_status(docs)
+
+            db.execute("UPDATE requests SET status = ? WHERE id = ?", (submission_status, doc['req_id']))
+            db.commit()
+
+        
+        elif expiry == today:
+
+             # email warning to admin
+
+            subject = f"Document {doc['doc_type']} submitted for {doc['request_name']} has expired."
+            text_body = f"Document {doc['doc_type']} submitted for {doc['request_name']} has expired."
+
+            html_body = f"""
+                <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+                        <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
+                            <h2>Document is about to expire.</h2>
+                            <p>Document <strong>{doc['doc_type']}</strong> submitted by <strong>{doc['sub_name']}</strong> for <strong>{doc['request_name']}</strong> has expired.</p>
+                            <p>Please log in to your dashboard to view the details.</p>
+                            <a href="http://127.0.0.1:5000/login"
+                                style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+                                Go to Dashboard
+                            </a>
+                        </div>
+                    </body>
+                </html>
+            """
+
+            # email to sub
+            send_email(doc['admin_email'], subject, text_body, html_body, email_password)
+
+
+            html_body = f"""
+                <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+                        <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
+                            <h2>Document is about to expire.</h2>
+                            <p>Document <strong>{doc['doc_type']}</strong> submitted to <strong>{doc['admin_name']}</strong> for <strong>{doc['request_name']}</strong> has expired.</p>
+                            <p>Please log in to your dashboard to view the details.</p>
+                            <a href="http://127.0.0.1:5000/submitter_login"
+                                style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+                                Go to Dashboard
+                            </a>
+                        </div>
+                    </body>
+                </html>
+            """
+
+            send_email(doc['sub_email'], subject, text_body, html_body, email_password)
 
 
 
 
 
 
+
+
+
+
+
+
+
+
+# schedule to run flag_expiry every 24 hours
+scheduler = BackgroundScheduler()
+scheduler.add_job(func=expiry_notification, trigger='interval', hours=24)
+scheduler.start()
+
+atexit.register(lambda: scheduler.shutdown())

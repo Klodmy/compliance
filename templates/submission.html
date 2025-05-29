@@ -65,8 +65,13 @@
                         <label for="{{ doc['doc_type'] }}">Upload New File:</label><br>
                         <input type="file" name="{{ doc['doc_type'] }}" required><br>
 
-                        <label for="{{ doc['doc_type'] }}_expiry">Expiry Date (if applicable):</label><br>
-                        <input type="date" name="{{ doc['doc_type'] }}_expiry"><br>
+                        {% if doc.expiry_required == 1 %}
+                            <label for="{{ doc['doc_type'] }}_expiry">Expiry Date (Required):</label><br>
+                            <input type="date" name="{{ doc['doc_type'] }}_expiry" required><br>
+                        {% else %}
+                            <label for="{{ doc['doc_type'] }}_expiry">Expiry Date (Optional):</label><br>
+                            <input type="date" name="{{ doc['doc_type'] }}_expiry"><br>
+                        {% endif %}
 
                         {% if doc["id"] %}
                             <input type="hidden" name="doc_id_{{ doc['doc_type'] }}" value="{{ doc['id'] }}">
@@ -85,5 +90,4 @@
 
 </body>
 </html>
-
 

@@ -367,7 +367,11 @@ def edit_set(set_id):
 
         # inserting chosen docs in the set db
         for doc_name, is_required in selected.items():
-            db.execute("INSERT INTO requirements (set_id, doc_type, is_required) VALUES (?, ?, ?)", (set_id, doc_name, is_required))
+
+            # check if expiration is required
+            ex_req = db.execute("SELECT expiry_required FROM users_docs WHERE name = ? AND user_id = ?", (doc_name, user_id)).fetchone()
+
+            db.execute("INSERT INTO requirements (set_id, doc_type, is_required, expiry_required) VALUES (?, ?, ?, ?)", (set_id, doc_name, is_required, ex_req['expiry_required']))
         
         # push collected to db
         db.commit()
@@ -579,7 +583,7 @@ def expiration():
                 pass
         # print errors
         except Exception as e:         
-            print(f"Skipping invalid expiry date: {doc['expiry_date']}")
+            pass
             
     
     # sorts the list by expiry date, putting closest/oldest first
@@ -785,7 +789,7 @@ def submission(token):
         return "Invalid token", 404
     
      # get all required docs for this user
-    required_docs = db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (doc_request["requirement_set_id"],)).fetchall()
+    required_docs = db.execute("SELECT * FROM requirements WHERE set_id = ?", (doc_request["requirement_set_id"],)).fetchall()
     
     # if user submits the form
     if request.method == "POST":
@@ -874,7 +878,8 @@ def submission(token):
                 "doc_status": "not_submitted",
                 "link": None,
                 "expiry_date": None,
-                "id": None
+                "id": None,
+                "expiry_required": 0
             })
 
     

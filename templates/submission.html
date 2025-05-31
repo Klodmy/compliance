@@ -64,8 +64,8 @@
                     <div class="upload-area">
                         <label for="{{ doc['doc_type'] }}">Upload New File:</label><br>
                         <input type="file" name="{{ doc['doc_type'] }}" required><br>
-
-                        {% if doc.expiry_required == 1 %}
+                        
+                        {% if doc.expiry_required|default(0)|int == 1 %}
                             <label for="{{ doc['doc_type'] }}_expiry">Expiry Date (Required):</label><br>
                             <input type="date" name="{{ doc['doc_type'] }}_expiry" required><br>
                         {% else %}

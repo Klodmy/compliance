@@ -152,54 +152,62 @@ def admin():
     
     if request.method == "POST":
 
-        # request required data from a form
-        request_name = request.form.get("name")
-        description = request.form.get("description")
-        project = request.form.get("project")
-        sub = request.form.get("submitter")
-        doc_set = request.form.get("set")
-        token = secrets.token_urlsafe(10)
 
-        if project and sub and doc_set:
-            
-            # assigning this to variable in order to get ID later on
-            cur = db.execute("INSERT INTO requests (name, description, project_id, submitter_id, requirement_set_id, admin_id, token) VALUES (?, ?, ?, ?, ?, ?, ?)", (request_name, description, project, sub, doc_set, user_id, token))
+        if request.form.get("delete"):
+            db.execute("DELETE FROM requests WHERE id = ?", (request.form.get("delete"),))
             db.commit()
-
-            # gets ID of the last added row
-            request_id = cur.lastrowid
-
-            # get data to send email
-            user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
-            company_name = db.execute("SELECT name FROM admin_users WHERE id = ?", (user_id,)).fetchone()
-            submitter_email = db.execute("SELECT email FROM submitting_users WHERE id = ?", (sub,)).fetchone()
-            the_project = db.execute("SELECT project_name FROM project WHERE id = ?", (project,)).fetchone()
-            sub_token = db.execute("SELECT token FROM submitting_users WHERE id = ?", (sub,)).fetchone()
-
-            # body of the email in case reveiving browser does not render html
-            body = f"You have a submittal request from {user_name['login']}. Please follow the following link to login: http://127.0.0.1:5000/submitter_login"
-
-            # html body of the email
-            html_body = (
-            f"""
-                <html>
-                    <body style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
-                        <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
-                            <h2 style="color: #444;">You have a new submittal request from <span style="color: #007bff;">{company_name}</span></h2>
-                            <p>Please log in to your dashboard to review the request.</p>
-                            <a href="http://127.0.0.1:5000/submitter_registration/{sub_token['token']}"
-                            style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Login to Dashboard</a>
-                        </div>
-                    </body>
-                </html>
-                """
-            )
-
-
-            # sends an email
-            send_email(submitter_email["email"], f"Submittals request for {the_project['project_name']}", body, html_body, email_password)
-
+            flash("Request deleted.")
             return redirect("/admin")
+        
+        else:
+            # request required data from a form
+            request_name = request.form.get("name")
+            description = request.form.get("description")
+            project = request.form.get("project")
+            sub = request.form.get("submitter")
+            doc_set = request.form.get("set")
+            token = secrets.token_urlsafe(10)
+
+            if project and sub and doc_set:
+                
+                # assigning this to variable in order to get ID later on
+                cur = db.execute("INSERT INTO requests (name, description, project_id, submitter_id, requirement_set_id, admin_id, token) VALUES (?, ?, ?, ?, ?, ?, ?)", (request_name, description, project, sub, doc_set, user_id, token))
+                db.commit()
+
+                # gets ID of the last added row
+                request_id = cur.lastrowid
+
+                # get data to send email
+                user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
+                company_name = db.execute("SELECT name FROM admin_users WHERE id = ?", (user_id,)).fetchone()
+                submitter_email = db.execute("SELECT email FROM submitting_users WHERE id = ?", (sub,)).fetchone()
+                the_project = db.execute("SELECT project_name FROM project WHERE id = ?", (project,)).fetchone()
+                sub_token = db.execute("SELECT token FROM submitting_users WHERE id = ?", (sub,)).fetchone()
+
+                # body of the email in case reveiving browser does not render html
+                body = f"You have a submittal request from {user_name['login']}. Please follow the following link to login: http://127.0.0.1:5000/submitter_login"
+
+                # html body of the email
+                html_body = (
+                f"""
+                    <html>
+                        <body style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+                            <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
+                                <h2 style="color: #444;">You have a new submittal request from <span style="color: #007bff;">{company_name}</span></h2>
+                                <p>Please log in to your dashboard to review the request.</p>
+                                <a href="http://127.0.0.1:5000/submitter_registration/{sub_token['token']}"
+                                style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Login to Dashboard</a>
+                            </div>
+                        </body>
+                    </html>
+                    """
+                )
+
+
+                # sends an email
+                send_email(submitter_email["email"], f"Submittals request for {the_project['project_name']}", body, html_body, email_password)
+
+                return redirect("/admin")
     
 
 
@@ -214,8 +222,9 @@ def admin():
                         SELECT 
                             project.project_number, 
                             project.project_name, 
-                            project.id,
-                            submitting_users.name, 
+                            project.id as project_id,
+                            submitting_users.name,
+                            requests.id as req_id,
                             requests.status,
                             requests.token,
                             requests.name as request_name
@@ -825,7 +834,7 @@ def submission(token):
                     rev = 0
 
                 # adds information about this submission to db
-                db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation, doc_type, request_id, admin_user_id, doc_status, filepath, revision) VALUES (?, ?, datetime('now'), ?, 'pending', ?, ?, ?, ?, ?, ?)", (session['id'], filepath, expiry, doc_type, doc_request["id"], doc_request["admin_id"], "pending_review", filepath, rev))
+                db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation, doc_type, request_id, admin_user_id, doc_status, filepath, revision, expiry_required) VALUES (?, ?, datetime('now'), ?, 'pending', ?, ?, ?, ?, ?, ?, ?)", (session['id'], filepath, expiry, doc_type, doc_request["id"], doc_request["admin_id"], "pending_review", filepath, rev, doc["expiry_required"]))
 
         db.commit()
 
@@ -879,9 +888,8 @@ def submission(token):
                 "link": None,
                 "expiry_date": None,
                 "id": None,
-                "expiry_required": 0
+                "expiry_required": req["expiry_required"]
             })
-
     
         
     return render_template("submission.html", project_name=project_name, doc_request=doc_request, required_docs=docs_to_display)

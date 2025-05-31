@@ -19,6 +19,7 @@
     <h1>Projects</h1>
 
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="text" name="project_number" placeholder="Project Number" required>
         <input type="text" name="project_name" placeholder="Project Name" required>
         <button type="submit">Add Project</button>

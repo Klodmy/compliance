@@ -8,8 +8,11 @@ from dotenv import load_dotenv
 import secrets
 from datetime import date, timedelta, datetime
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
+from flask_wtf.csrf import CSRFProtect
+
 
 ### INITIATON, SETTINGS, CONSTANTS ###
 
@@ -17,6 +20,8 @@ app = Flask(__name__)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.secret_key = "mysecret"
 os.environ["FLASK_ENV"] = "development"
+csfr = CSRFProtect()
+csfr.init_app(app)
 
 
 # set uploads folder and allowed extensions, set email password
@@ -60,7 +65,7 @@ def login():
         user = db.execute("SELECT * FROM admin_users WHERE login = ?", (form_login, )).fetchone()
 
         # checking user's password, redirects to admin panel if ok
-        if user and form_password == user["password"]:
+        if user and check_password_hash(user["password"], form_password):
             session["admin"] = True
             session["id"] = user["id"]
 
@@ -107,12 +112,26 @@ def registration():
         password2 = request.form.get("password2")
         email = request.form.get("email")
 
+        existing = db.execute("SELECT * FROM admin_users WHERE login = ? OR email = ?", (login, email)).fetchone()
+
+        if existing:
+            if existing["login"] == login:
+                flash("This username is already taken.")
+            if existing["email"] == email:
+                flash("This email is already in use.")
+            return redirect("/registration")
+        
+
         # check if all gethered and password confirmed
         if login and password and password2 and email:
             if password == password2:
+
+                # generate hash
+                
+                hashed_password = generate_password_hash(password)
                 
                 # create new user in db
-                db.execute("INSERT INTO admin_users (name, login, password, email) VALUES (?, ?, ?, ?)", (company_name, login, password, email))
+                db.execute("INSERT INTO admin_users (name, login, password, email) VALUES (?, ?, ?, ?)", (company_name, login, hashed_password, email))
                 db.commit()
 
                 # sands back to login
@@ -693,8 +712,10 @@ def submitter_registration(token):
         if login and password and password2 and submitter:
             if password == password2:
                 
+                hashed_password = generate_password_hash(password)
+
             # create new user in db
-                db.execute("UPDATE submitting_users SET login = ?, password = ? WHERE token = ?", (login, password, token))
+                db.execute("UPDATE submitting_users SET login = ?, password = ? WHERE token = ?", (login, hashed_password, token))
                 db.commit()
 
                 # sands back to login
@@ -719,7 +740,7 @@ def submitter_login():
 
         user = db.execute("SELECT * FROM submitting_users WHERE login = ?", (login,)).fetchone()
 
-        if user and password == user["password"]:
+        if user and check_password_hash(user["password"], password):
 
             # initiating session
             session["submitter"] = True

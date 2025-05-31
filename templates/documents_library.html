@@ -19,6 +19,7 @@
     <h1>Documents Library</h1>
 
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="text" name="doc_name" placeholder="Document Name" required>
         <input type="text" name="doc_description" placeholder="Document Description" required>
         <label style="margin-left: 10px;">
@@ -49,6 +50,7 @@
                 <td>{{ 'Yes' if doc.expiry_required else 'No' }}</td>
                 <td>
                     <form method="POST" action="/del_doc/{{ doc['id'] }}" onsubmit="return confirm('Delete this document?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit">Delete</button>
                     </form>
                 </td>

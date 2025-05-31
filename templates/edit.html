@@ -16,6 +16,7 @@
     <h1>Edit Requirement Set</h1>
 
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <p>Select the documents required for this set:</p>
 
         {% for doc in all_docs %}

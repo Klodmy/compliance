@@ -23,6 +23,7 @@
         <td>{{ sub['email'] }}</td>
         <td>{{ sub['token'] }}</td>
         <td><form method="post" action="/delete_sub">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="token" value="{{ sub['token'] }}">
             <button type="submit">Delete</button>
         </form></td>

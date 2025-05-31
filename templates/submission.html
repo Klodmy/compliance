@@ -41,6 +41,7 @@
     {% endwith %}
 
     <form method="post" action="/submission/{{ doc_request['token'] }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         {% for doc in required_docs %}
             <div class="doc-block" style="margin-bottom: 20px;">
                 <strong>{{ doc["doc_type"] }}</strong><br>

@@ -97,6 +97,7 @@
     {% endwith %}
 
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         {% for doc in docs %}
             <div class="doc-section">
                 <p><strong>Document Type:</strong> {{ doc.doc_type }}</p>

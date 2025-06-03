@@ -12,9 +12,7 @@ CREATE TABLE submitting_users (
     login TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     email TEXT NOT NULL,
-    token TEXT UNIQUE NOT NULL,
-    invited_by INTEGER NOT NULL, name TEXT,
-    FOREIGN KEY (invited_by) REFERENCES admin_users(id)
+    token TEXT UNIQUE NOT NULL
 );
 
 CREATE TABLE project (
@@ -91,4 +89,13 @@ CREATE TABLE IF NOT EXISTS "docs" (
     FOREIGN KEY (submitting_user_id) REFERENCES submitting_users(id),
     FOREIGN KEY (admin_user_id) REFERENCES admin_users(id),
     FOREIGN KEY (request_id) REFERENCES requests(id)
+);
+
+CREATE TABLE "admin_submitters" (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    admin_id INTEGER NOT NULL,
+    submitter_id INTEGER NOT NULL,
+    FOREIGN KEY (admin_id) REFERENCES admin_users(id),
+    FOREIGN KEY (submitter_id) REFERENCES users(id)
+ 
 );

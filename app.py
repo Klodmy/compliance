@@ -232,7 +232,12 @@ def admin():
 
    # getting admin, submitters, projects
     user = db.execute("SELECT * FROM admin_users WHERE id = ?", (session["id"],)).fetchone()
-    subs = db.execute("SELECT * FROM submitting_users WHERE invited_by = ?", (session["id"],)).fetchall()
+    subs = db.execute("""SELECT submitting_users.*,
+                    admin_submitters.submitter_id
+                    FROM submitting_users
+                    JOIN admin_submitters
+                    ON admin_submitters.submitter_id = submitting_users.id
+                    WHERE admin_submitters.admin_id = ?""", (session["id"],)).fetchall()
     projects = db.execute("SELECT * FROM project WHERE project_admin_id = ?", (user_id,)).fetchall()
     sets = db.execute("SELECT * FROM requirement_sets WHERE admin_user_id = ?", (user_id,)).fetchall()
     requests = db.execute("SELECT * FROM requests").fetchall()
@@ -275,16 +280,39 @@ def my_submitters():
         name = request.form.get("name")
         email = request.form.get("email")
 
+        # check if user with email exists
+        existing_subs = db.execute("SELECT * FROM submitting_users WHERE email = ?", (email.strip().lower(),)).fetchone()
+        if existing_subs:
+            # check if already linked to admin
+            already_taken = db.execute("SELECT * FROM admin_submitters WHERE admin_id = ? AND submitter_id = ?", (user_id, existing_subs["id"])).fetchone()
+            # links if not
+            if not already_taken:
+                db.execute("INSERT INTO admin_submitters (admin_id, submitter_id) VALUES (?, ?)", (user_id, existing_subs["id"]))
+            # passes if it is
+            else:
+                pass
+        else:
+            # adding new user dummy data
+            db.execute("INSERT INTO submitting_users (login, password, email, token, name) VALUES (?, ?, ?, ?, ?)", (str(randint(1, 1000)), str(randint(1, 1000)), email.strip().lower(), new_token, name))
+            db.execute("INSERT INTO admin_submitters (admin_id, submitter_id) VALUES (?, ?)", (user_id, existing_subs["id"]))
+            
 
-        # adding new user dummy data
-        db.execute("INSERT INTO submitting_users (login, password, email, token, invited_by, name) VALUES (?, ?, ?, ?, ?, ?)", (str(randint(1, 1000)), str(randint(1, 1000)), email, new_token, user_id, name))
-        db.commit()
+        db.commit()  
         flash(f"Submitter {name} was successfully added.")
         return redirect("/my_submitters")
     
     # get existing submitters
-    submitters = db.execute("SELECT name, email, token FROM submitting_users WHERE invited_by = ?", (user_id,)).fetchall()
-
+    submitters = db.execute("""
+                            SELECT 
+                            submitting_users.name, 
+                            submitting_users.email, 
+                            submitting_users.token,
+                            admin_submitters.submitter_id
+                            FROM submitting_users
+                            JOIN admin_submitters ON submitting_users.id = admin_submitters.submitter_id
+                            WHERE admin_submitters.admin_id  = ?
+""", (user_id,)).fetchall()
+    print(submitters)
     return render_template("my_submitters.html", submitters=submitters)
 
 
@@ -708,11 +736,15 @@ def submitter_registration(token):
         login = request.form.get("login")
         password = request.form.get("password")
         password2 = request.form.get("password2")
+        print(token)
 
         if login and password and password2 and submitter:
             if password == password2:
                 
                 hashed_password = generate_password_hash(password)
+                print("Login:", login)
+                print("Password1:", password)
+                print("Password2:", password2)
 
             # create new user in db
                 db.execute("UPDATE submitting_users SET login = ?, password = ? WHERE token = ?", (login, hashed_password, token))

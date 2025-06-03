@@ -21,6 +21,7 @@
 
     <h2>Request a Submittal</h2>
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div style="margin-bottom: 15px;">
             <label for="name"><strong>Request Name:</strong></label><br>
             <input type="text" name="name" id="name" placeholder="e.g. H&S Docs" style="width: 30%;" required>

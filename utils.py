@@ -62,8 +62,6 @@ def get_submission_status(docs):
     else:
         return "pending_review"
     
-    
-
 
 
 

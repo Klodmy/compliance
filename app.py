@@ -293,8 +293,10 @@ def my_submitters():
                 pass
         else:
             # adding new user dummy data
-            db.execute("INSERT INTO submitting_users (login, password, email, token, name) VALUES (?, ?, ?, ?, ?)", (str(randint(1, 1000)), str(randint(1, 1000)), email.strip().lower(), new_token, name))
-            db.execute("INSERT INTO admin_submitters (admin_id, submitter_id) VALUES (?, ?)", (user_id, existing_subs["id"]))
+            cur = db.execute("INSERT INTO submitting_users (login, password, email, token, name) VALUES (?, ?, ?, ?, ?)", (str(randint(1, 1000)), str(randint(1, 1000)), email.strip().lower(), new_token, name))
+            sub_id = cur.lastrowid
+
+            db.execute("INSERT INTO admin_submitters (admin_id, submitter_id) VALUES (?, ?)", (user_id, sub_id))
             
 
         db.commit()  
@@ -1001,10 +1003,40 @@ def delete_doc(doc_id):
 
 
 
-@app.route("/test_expiry")
-def test_expiry():
-    expiry_notification()
-    return "Expiry check triggered."
+@app.route("/sub_company_information", methods=['GET', 'POST'])
+def company_information():
+
+    # connect db
+    db = get_db()
+
+    # get current user id
+    user_id = session.get("id")
+    
+    # redirects to login if none
+    if not user_id:
+        return redirect("/submitter_login")
+
+    if request.method == "POST":
+
+        # collects new info
+        name = request.form.get("company_name")
+        description = request.form.get("company_information")
+        email = request.form.get("email")
+        address = request.form.get("address")
+        phone = request.form.get("phone")
+
+        # inserts into db
+        db.execute("UPDATE submitting_users SET name = ?, description = ?, email = ?, address = ?, phone = ? WHERE id = ?", (name, description, email, address, phone, user_id))
+        db.commit()
+        flash("Information successfully updated.")
+
+    # gets info about user
+    user = db.execute("SELECT * FROM submitting_users WHERE id = ?", (user_id,)).fetchone()
+
+    
+    return render_template("sub_company_information.html", user=user)
+
+
 
 
 

@@ -19,6 +19,16 @@
 
     <h1>My Requirement Sets</h1>
 
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+       <div class="flash-messages">
+        {% for message in messages %}
+        <div class="flash">{{ message }}</div>
+        {% endfor %}
+       </div>
+    {% endif %}
+    {% endwith %}
+
     <!-- Form to create a new set -->
     <form method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -29,7 +39,7 @@
     <hr>
 
     <!-- Display existing sets -->
-    {% for set in doc_sets %}
+    {% for set in doc_sets|reverse %}
         <div style="margin-bottom: 20px;">
             <h3>{{ set.name }}</h3>
 

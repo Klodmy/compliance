@@ -26,7 +26,7 @@
             <th>Status</th>
             <th>Action</th>
         </tr>
-        {% for req in sub_requests %}
+        {% for req in sub_requests|reverse %}
         <tr>
             <td>{{ req.request_name }}</td>
             <td>{{ req.project_name }}</td>

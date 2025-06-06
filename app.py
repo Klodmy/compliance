@@ -277,7 +277,7 @@ def my_submitters():
 
         # creating token and requesting new invited user's email
         new_token = str(uuid.uuid4())
-        name = request.form.get("name")
+        name = None
         email = request.form.get("email")
 
         # check if user with email exists
@@ -346,6 +346,8 @@ def documents_library():
         # insert results into db
         db.execute("INSERT INTO users_docs (name, description, expiry_required, user_id) VALUES (?, ?, ?, ?)", (doc_name, doc_description, expiry_required, user_id))
         db.commit()
+
+        flash("Document was successfully added.")
         
         # redirects to updated page
         return redirect("/documents_library")
@@ -377,6 +379,7 @@ def my_sets():
         db.execute("INSERT INTO requirement_sets (admin_user_id, name) VALUES (?, ?)", (user_id, requirement_set))
         db.commit()
 
+        flash("Set was created successfully.")
     
     # gets all doc sets this user has
     doc_sets = db.execute("SELECT id, name FROM requirement_sets WHERE admin_user_id = ?", (user_id, )).fetchall()
@@ -433,6 +436,9 @@ def edit_set(set_id):
         
         # push collected to db
         db.commit()
+
+        flash("Set was updated successfully.")
+
         return redirect("/my_sets")
     
     current_set = {}
@@ -466,6 +472,8 @@ def projects():
         # add to the db
         db.execute("INSERT INTO project (project_number, project_name, project_admin_id) VALUES (?, ?, ?)", (project_number, project_name, user_id))
         db.commit()
+
+        flash("Project was created successfully.")
 
         # refresh page
         return redirect("/projects")

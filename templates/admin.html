@@ -74,7 +74,7 @@
             <th>Status</th>
             <th>Delete Submission</th>
         </tr>
-    {% for req in this_req %}
+    {% for req in this_req|reverse %}
     <tr>  
         <td><a href="/review_submission/{{ req.token }}">{{ req.request_name }}</a></td>
         <td>{{ req.project_number }}</td>

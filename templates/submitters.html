@@ -17,7 +17,7 @@
         <th>Token</th>
         <th>Actions</th>
     </tr>
-    {% for sub in subs %}
+    {% for sub in subs|reverse %}
     <tr>
         <td>{{ sub['login'] }}</td>
         <td>{{ sub['email'] }}</td>

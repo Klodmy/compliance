@@ -15,6 +15,16 @@
 
     <h1>Edit Requirement Set</h1>
 
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+       <div class="flash-messages">
+        {% for message in messages %}
+        <div class="flash">{{ message }}</div>
+        {% endfor %}
+       </div>
+    {% endif %}
+    {% endwith %}
+
     <form method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <p>Select the documents required for this set:</p>
@@ -26,13 +36,12 @@
                     {{ doc.name }}
                 </label>
 
-                {% if doc.name in current_set %}
-                    <label style="margin-left: 15px;">
+                <label style="margin-left: 15px;">
                         Required?
                         <input type="checkbox" name="is_required_{{ doc.name }}"
                                {% if current_set[doc.name] %}checked{% endif %}>
-                    </label>
-                {% endif %}
+                </label>
+
             </div>
         {% endfor %}
 

@@ -18,6 +18,16 @@
 
     <h1>Projects</h1>
 
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+       <div class="flash-messages">
+        {% for message in messages %}
+        <div class="flash">{{ message }}</div>
+        {% endfor %}
+       </div>
+    {% endif %}
+    {% endwith %}
+
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="text" name="project_number" placeholder="Project Number" required>
@@ -26,8 +36,11 @@
     </form>
 
     <h2>Your Projects</h2>
+
+    
+
     <ul>
-        {% for project in projects %}
+        {% for project in projects|reverse %}
             <li><strong>{{ project.project_number }}</strong>: {{ project.project_name }}</li>
         {% else %}
             <li>No projects yet.</li>

@@ -18,6 +18,16 @@
 
     <h1>Documents Library</h1>
 
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+       <div class="flash-messages">
+        {% for message in messages %}
+        <div class="flash">{{ message }}</div>
+        {% endfor %}
+       </div>
+    {% endif %}
+    {% endwith %}
+
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="text" name="doc_name" placeholder="Document Name" required>
@@ -43,7 +53,7 @@
             </tr>
         </thead>
         <tbody>
-            {% for doc in docs %}
+            {% for doc in docs|reverse %}
             <tr>
                 <td>{{ doc.name }}</td>
                 <td>{{ doc.description }}</td>

@@ -4,17 +4,24 @@
     <meta charset="UTF-8">
     <title>Admin Panel</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <nav style="background-color: #f0f0f0; padding: 10px;">
-        <a href="/admin" style="margin-right: 15px;">Dashboard</a>
-        <a href="/my_submitters" style="margin-right: 15px;">My Submitters</a>
-        <a href="/documents_library" style="margin-right: 15px;">Documents Library</a>
-        <a href="/my_sets" style="margin-right: 15px;">Requirement Sets</a>
-        <a href="/projects" style="margin-right: 15px;">Projects</a>
-        <a href="/expiration" style="margin-right: 15px;">Expiring documents</a>
-        <a href="/logout">Log Out</a>
+    <nav>
+        <div class="nav">
+            </div>
+             <a href="/admin">
+                <img src="{{ url_for('static', filename='concomply-logo.png') }}" alt="ConComply Logo" class="logo">
+             </a>
+            <a href="/admin" style="margin-right: 15px;">Dashboard</a>
+            <a href="/my_submitters" style="margin-right: 15px;">My Submitters</a>
+            <a href="/documents_library" style="margin-right: 15px;">Documents Library</a>
+            <a href="/my_sets" style="margin-right: 15px;">Requirement Sets</a>
+            <a href="/projects" style="margin-right: 15px;">Projects</a>
+            <a href="/expiration" style="margin-right: 15px;">Expiring documents</a>
+            <a href="/logout">Log Out</a>
+        </div>    
     </nav>
 
     <h2>Hello, {{ user['login'] }}</h2>
@@ -22,42 +29,42 @@
     <h2>Request a Submittal</h2>
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div style="margin-bottom: 15px;">
-            <label for="name"><strong>Request Name:</strong></label><br>
-            <input type="text" name="name" id="name" placeholder="e.g. H&S Docs" style="width: 30%;" required>
+        <div class = "form-group">
+            <label for="name"><strong>Request Name:</strong></label>
+            <input type="text" name="name" id="name" placeholder="Name..." style="width: 30%;" required>
         </div>
 
-        <div style="margin-bottom: 15px;">
-            <label for="description"><strong>Description (optional):</strong></label><br>
-            <textarea name="description" id="description" rows="3" style="width: 50%;" placeholder="Add any notes, context, or clarifications..."></textarea>
+        <div class = "form-group">
+            <label for="description"><strong>Description (optional):</strong></label>
+            <textarea name="description" id="description" rows="3" style="width: 30%;" placeholder="Add notes..."></textarea>
         </div>
-        <label for="project">Select Project:</label><br>
-        <select name="project" required>
+        <label for="project">Select Project:</label>
+        <select name="project" class="input_small" required>
             {% for project in projects %}
                 <option value="{{ project.id }}">{{ project.project_name }}</option>
             {% else %}
                 <option disabled>No projects found</option>
             {% endfor %}
-        </select><br><br>
+        </select>
 
-        <label for="submitter">Select Submitter:</label><br>
-        <select name="submitter" required>
+        <label for="submitter">Select Submitter:</label>
+        <select name="submitter" class="input_small" required>
             {% for sub in subs %}
                 <option value="{{ sub.id }}">{{ sub.name }}</option>
             {% else %}
                 <option disabled>No submitters found</option>
             {% endfor %}
-        </select><br><br>
+        </select>
 
-        <label for="set">Select Requirement Set:</label><br>
+        <label for="set">Select Requirement Set:</label>
         <!-- You haven't loaded sets yet in your backend code; placeholder below -->
-        <select name="set" required>
+        <select name="set" class="input_small" required>
             {% for set in sets %}
                 <option value="{{ set.id }}">{{ set.name }}</option>
             {% else %}
             <option disabled>No sets found</option>
             {% endfor %}
-        </select><br><br>
+        </select><br></br>
 
         <button type="submit">Create Request</button>
     </form>

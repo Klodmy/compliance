@@ -2,17 +2,49 @@
 body {
     font-family: 'Roboto', sans-serif;
     margin: 40px;
-    background-color: #f4f4f4;
+    background-color: #e6eef3;
     color: #333;
+}
+
+.layout {
+  display: flex;
+  height: 100vh; /* full viewport height */
+}
+
+.sidebar {
+  width: 200px;
+  margin: 0px;
+  padding: 0px;
+  background-color: #f8f8f8;
+  padding: 20px;
+  position: fixed;
+  overflow: auto;
+  height: 72%;
+}
+
+.sidebar a {
+ display: block;
+}
+
+.sidebar a:hover {
+    color: #5cb85c;
+}
+
+.main-content {
+  flex-grow: 5;
+  padding: 20px;
+  background-color: #ffffff;
+  margin-left: 250px;
 }
 
 nav {
     display: flex;
-    background-color: transparent;
+    background-color: #afcfee;
     padding: 10px;
     margin-bottom: 20px;
     justify-content: flex-end;
     text-decoration: none;
+    align-items: center;
 }
 
 nav a:hover {
@@ -20,8 +52,9 @@ nav a:hover {
 }
 
 nav .logo {
-    height: 180px;
+    height: 200px;
     vertical-align: middle;
+    margin-right: auto;
 }
 
 a:link {

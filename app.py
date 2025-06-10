@@ -1214,7 +1214,6 @@ def expiry_notification():
 
 
 
-
 # schedule to run flag_expiry every 24 hours
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=expiry_notification, trigger='interval', hours=24)

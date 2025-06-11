@@ -7,36 +7,40 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header>
-        <a href="/admin" style="margin-left: 15px;">
-            <img src="{{ url_for('static', filename='concomply-logo.png') }}" alt="ConComply Logo" class="logo">
-        </a>
-        <p style="margin-left: auto;">Hello, <strong>{{ user['login'] }}</strong>!</p>
-        <a href="/logout" style="margin-left: 15px; margin-right: 15px;">Log Out</a>
-    </header>
+    <div class="wrapper">
+        <header>
+            <a href="/admin" style="margin-left: 15px;">
+                <img src="{{ url_for('static', filename='concomply-logo.png') }}" alt="ConComply Logo" class="logo">
+            </a>
+            <p style="margin-left: auto;">Hello, <strong>{{ user['login'] }}</strong>!</p>
+            <a href="/logout" style="margin-left: 15px; margin-right: 15px;">Log Out</a>
+        </header>
 
-    <!-- Layout (Sidebar + Main) -->
-    <div class="layout">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <a href="/admin">Dashboard</a><br>
-            <a href="/my_submitters">My Submitters</a><br>
-            <a href="/documents_library">Documents Library</a><br>
-            <a href="/my_sets">Requirement Sets</a><br>
-            <a href="/projects">Projects</a><br>
-            <a href="/expiration">Expiring Documents</a><br>
+        <!-- Layout (Sidebar + Main) -->
+        <div class="layout">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="sidebar-items">
+                    <a href="/admin" style="margin-top: 10px;">Dashboard</a><br>
+                    <a href="/my_submitters">My Submitters</a><br>
+                    <a href="/documents_library">Documents Library</a><br>
+                    <a href="/my_sets">Requirement Sets</a><br>
+                    <a href="/projects">Projects</a><br>
+                    <a href="/expiration">Expiring Documents</a><br>
+                </div>
+            </div>
+
+            <!-- Main Content Block -->
+            <div class="main-content">
+                {% block content %}{% endblock %}
+            </div>
         </div>
 
-        <!-- Main Content Block -->
-        <div class="main-content">
-            {% block content %}{% endblock %}
-        </div>
+        
     </div>
-
-    <!-- Footer -->
+<!-- Footer -->
     <footer>
         <p>HELLO</p>
     </footer>
-
 </body>
 </html>

@@ -1,20 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Expiring Documents</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <nav style="background-color: #f0f0f0; padding: 10px;">
-        <a href="/admin" style="margin-right: 15px;">Dashboard</a>
-        <a href="/my_submitters" style="margin-right: 15px;">My Submitters</a>
-        <a href="/documents_library" style="margin-right: 15px;">Documents Library</a>
-        <a href="/my_sets" style="margin-right: 15px;">Requirement Sets</a>
-        <a href="/projects" style="margin-right: 15px;">Projects</a>
-        <a href="/logout">Log Out</a>
-    </nav>
+{% extends "layout.html" %}
 
+{% block title %}Expiring Documents{% endblock %}
+
+{% block content %}
     <h2>Expiring or Expired Documents (Next 7 Days)</h2>
 
     {% if expiring %}
@@ -38,5 +26,4 @@
         <p>No documents are expiring soon.</p>
     {% endif %}
 
-</body>
-</html>
+{% endblock %}

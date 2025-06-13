@@ -1,26 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Add Submitter</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
+{% extends "layout.html" %}
 
-    <nav>
-        <a href="/admin">Dashboard</a>
-        <a href="/my_submitters">My Submitters</a>
-        <a href="/documents_library">Documents Library</a>
-        <a href="/my_sets">Requirement Sets</a>
-        <a href="/projects">Projects</a>
-        <a href="/logout">Log Out</a>
-    </nav>
+{% block title %}Submitters{% endblock %}
+
+{% block content %}
 
     <h1>Add a New Submitter</h1>
 
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="email" name="email" placeholder="Submitter Email" required>
+        <div class="form-group">
+            <input type="email" name="email" placeholder="Submitter Email" required>
+        </div>
         <button type="submit">Add Submitter</button>
     </form>
 
@@ -73,5 +63,4 @@
         </tbody>
     </table>
 
-</body>
-</html>
+{% endblock %}

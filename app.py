@@ -231,6 +231,7 @@ def admin():
 
 
    # getting admin, submitters, projects
+    user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
     user = db.execute("SELECT * FROM admin_users WHERE id = ?", (session["id"],)).fetchone()
     subs = db.execute("""SELECT submitting_users.*,
                     admin_submitters.submitter_id
@@ -258,7 +259,7 @@ def admin():
                         WHERE requests.admin_id = ?
                         """, (session.get('id'),)).fetchall()
 
-    return render_template("admin.html", user=user, subs=subs, projects=projects, sets=sets, requests=requests, this_req=this_req)
+    return render_template("admin.html", user_name=user_name, user=user, subs=subs, projects=projects, sets=sets, requests=requests, this_req=this_req)
 
 
 
@@ -272,6 +273,7 @@ def my_submitters():
 
     db = get_db()
     user_id = session.get("id")
+    user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
 
     if request.method == "POST":
 
@@ -315,7 +317,7 @@ def my_submitters():
                             WHERE admin_submitters.admin_id  = ?
 """, (user_id,)).fetchall()
     print(submitters)
-    return render_template("my_submitters.html", submitters=submitters)
+    return render_template("my_submitters.html", submitters=submitters, user_name=user_name)
 
 
 
@@ -330,6 +332,7 @@ def documents_library():
     # call db, get user id
     db = get_db()
     user_id = session.get("id")
+    user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
 
     if request.method == "POST":
 
@@ -355,7 +358,7 @@ def documents_library():
     # get existing docs to display
     docs = db.execute("SELECT id, name, description, expiry_required FROM users_docs WHERE user_id  = ?", (user_id,)).fetchall()
 
-    return render_template("documents_library.html", docs=docs)
+    return render_template("documents_library.html", docs=docs, user_name=user_name)
 
 
 
@@ -371,6 +374,7 @@ def my_sets():
 
     # gets current user id
     user_id = session["id"]
+    user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
 
     if request.method == "POST":
 
@@ -392,7 +396,7 @@ def my_sets():
         docs = db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (set_id,)).fetchall()
         docs_by_set[set_id] = docs
 
-    return render_template("my_sets.html", doc_sets=doc_sets, docs_by_set=docs_by_set)
+    return render_template("my_sets.html", doc_sets=doc_sets, docs_by_set=docs_by_set, user_name=user_name)
 
 
 
@@ -406,6 +410,7 @@ def edit_set(set_id):
 
     db = get_db()
     user_id = session.get("id")
+    user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
 
     # get docs created by user
     all_docs = db.execute("SELECT * FROM users_docs WHERE user_id = ?", (user_id,)).fetchall()
@@ -447,7 +452,7 @@ def edit_set(set_id):
     for doc in this_set:
         current_set[doc["doc_type"]] = doc["is_required"]
 
-    return render_template("edit.html", current_set=current_set, all_docs=all_docs)
+    return render_template("edit.html", current_set=current_set, all_docs=all_docs, user_name=user_name)
 
 
 
@@ -462,6 +467,7 @@ def projects():
     # call db, get user id
     db = get_db()
     user_id = session.get("id")
+    user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
 
     if request.method == "POST":
         
@@ -481,7 +487,7 @@ def projects():
     # get existing projects
     projects = db.execute("SELECT project_number, project_name FROM project WHERE project_admin_id = ?", (user_id,)).fetchall()
     
-    return render_template("projects.html", projects=projects)
+    return render_template("projects.html", projects=projects, user_name=user_name)
 
 
 
@@ -493,6 +499,8 @@ def review_submission(token):
         return redirect("/login")
 
     db = get_db()
+    user_id = session.get("id")
+    user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
 
     # get required submission info
     submission = db.execute("""
@@ -612,7 +620,7 @@ def review_submission(token):
         flash("Review finalized. Submission status updated and email sent.")
         return redirect(f"/review_submission/{token}")
 
-    return render_template("review_submission.html", docs=docs_to_display, token=token)
+    return render_template("review_submission.html", docs=docs_to_display, token=token, user_name=user_name)
 
 
 # review expiring docs
@@ -624,6 +632,7 @@ def expiration():
 
     # get current user
     user_id = session.get("id")
+    user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
 
     # get current user docs
     docs = db.execute("SELECT * FROM docs WHERE admin_user_id = ?", (user_id,)).fetchall()
@@ -655,7 +664,7 @@ def expiration():
     # sorts the list by expiry date, putting closest/oldest first
     expiring.sort(key=lambda doc: datetime.strptime(doc["expiry_date"], "%Y-%m-%d").date())
                 
-    return render_template("expiration.html", expiring=expiring)
+    return render_template("expiration.html", expiring=expiring, user_name=user_name)
 
 
 
@@ -701,9 +710,11 @@ def del_doc(id):
 @app.route("/project_summary/<id>")
 def project_summary(id):
 
-    db = get_db()
 
+    db = get_db()
+    user_id = session.get("id")
     user = db.execute("SELECT project_admin_id FROM project WHERE id = ?", (id,)).fetchone()
+    user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
 
     if not user or session.get("id") != user["project_admin_id"]:
         return redirect("/login")
@@ -725,7 +736,7 @@ def project_summary(id):
     """, (id)).fetchall()
 
 
-    return render_template("project_summary.html", submissions=submissions)
+    return render_template("project_summary.html", submissions=submissions, user_name=user_name)
 
 
 

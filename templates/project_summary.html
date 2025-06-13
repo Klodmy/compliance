@@ -1,18 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Project Summary</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
+{% extends "layout.html" %}
 
-    <nav>
-        <a href="/admin">Dashboard</a>
-        <a href="/projects">Projects</a>
-        <a href="/logout">Log Out</a>
-    </nav>
+{% block title %}Submitters{% endblock %}
 
+{% block content %}
     <h2>Project Submissions Summary</h2>
 
     {% if submissions %}
@@ -40,5 +30,4 @@
         <p>No submissions found for this project.</p>
     {% endif %}
 
-</body>
-</html>
+{% endblock %}

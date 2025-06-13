@@ -1,89 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Review Submission</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-        }
+{% extends "layout.html" %}
 
-        .doc-section {
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            background-color: #f9f9f9;
-        }
+{% block title %}Review Submission{% endblock %}
 
-        .doc-section p {
-            margin: 5px 0;
-        }
-
-        select {
-            padding: 5px;
-            border-radius: 4px;
-        }
-
-        .not-submitted {
-            color: red;
-            font-weight: bold;
-        }
-
-        button {
-            background-color: #007bff;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        .flash {
-            background-color: #dff0d8;
-            color: #3c763d;
-            padding: 10px;
-            margin-bottom: 20px;
-            border: 1px solid #d6e9c6;
-            border-radius: 4px;
-        }
-
-        nav {
-            background-color: #f0f0f0;
-            padding: 10px;
-            margin-bottom: 30px;
-        }
-
-        nav a {
-            margin-right: 15px;
-            text-decoration: none;
-            color: #333;
-            font-weight: bold;
-        }
-
-        nav a:hover {
-            text-decoration: underline;
-        }
-    </style>
-</head>
-<body>
-
-    <nav>
-        <a href="/admin">Dashboard</a>
-        <a href="/my_submitters">My Submitters</a>
-        <a href="/documents_library">Documents Library</a>
-        <a href="/my_sets">Requirement Sets</a>
-        <a href="/projects">Projects</a>
-        <a href="/logout">Log Out</a>
-    </nav>
-
+{% block content %}
     <h1>Review Submission</h1>
 
     {% with messages = get_flashed_messages() %}
@@ -124,8 +43,7 @@
         <button type="submit">Finalize Review</button>
     </form>
 
-</body>
-</html>
+{% endblock %}
 
 
 <script>

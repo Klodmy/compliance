@@ -1,18 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Edit Requirement Set</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    
-    <nav style="background-color: #f0f0f0; padding: 10px;">
-        <a href="/admin" style="margin-right: 15px;">Dashboard</a>
-        <a href="/my_sets" style="margin-right: 15px;">My Requirement Sets</a>
-        <a href="/logout">Log Out</a>
-    </nav>
+{% extends "layout.html" %}
 
+{% block title %}Edit Requirement Set{% endblock %}
+
+{% block content %}
     <h1>Edit Requirement Set</h1>
 
     {% with messages = get_flashed_messages() %}
@@ -53,7 +43,5 @@
     <a href="{{ url_for('my_sets') }}">
         <button type="button">Back to My Sets</button>
     </a>
-
-</body>
-</html>
+{{% endblock %}}
 

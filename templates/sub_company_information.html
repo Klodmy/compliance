@@ -1,13 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Company Information</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
+{% extends "sub_layout.html" %}
 
-    <div class="container">
+{% block title %}Projects{% endblock %}
+
+{% block content %}
+    
         <h2>Company Information</h2>
 
         {% with messages = get_flashed_messages() %}
@@ -21,6 +17,8 @@
         {% endwith %}
 
         <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
             <label for="company_name">Company Name</label>
             <input type="text" name="company_name" id="company_name" value="{{ user.name }}" required>
 
@@ -40,5 +38,4 @@
         </form>
     </div>
 
-</body>
-</html>
+{% endblock %}

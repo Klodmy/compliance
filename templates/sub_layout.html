@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Admin Panel{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+            <a href="/admin" style="margin-left: 15px;">
+                <img src="{{ url_for('static', filename='concomply-logo.png') }}" alt="ConComply Logo" class="logo">
+            </a>
+            <p style="margin-left: auto;">Hello, <strong>{{ sub_user['name'] }}</strong>!</p>
+            <a href="/sub_company_information" style="margin-right: 15px; margin-left: 15px;">Company Information</a>
+            <a href="/logout" style="margin-right: 15px;">Log Out</a>
+        </header>
+
+        <!-- Layout (Sidebar + Main) -->
+        <div class="layout">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="sidebar-items">
+                    <a href="/submitter_dashboard" style="margin-right: 15px; margin-top: 10px;">Dashboard</a>
+                </div>
+            </div>
+
+            <!-- Main Content Block -->
+            <div class="main-content">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+
+        
+    </div>
+<!-- Footer -->
+    <footer>
+        <p>HELLO</p>
+    </footer>
+</body>
+</html>

@@ -825,6 +825,7 @@ def submitter_dashboard():
     # db call, gets admin's id
     db = get_db()
     submitter_id = session.get("id")
+    sub_user = db.execute("SELECT * FROM submitting_users WHERE id = ?", (submitter_id,)).fetchone()
     
 
     # redirect if not logged in
@@ -850,16 +851,19 @@ def submitter_dashboard():
     WHERE requests.submitter_id = ?
 """, (submitter_id,)).fetchall()
 
-    return render_template("submitter_dashboard.html", submitter=submitter, sub_requests=sub_requests)
+    return render_template("submitter_dashboard.html", submitter=submitter, sub_requests=sub_requests, sub_user=sub_user)
 
 
 
-    # page for the submission of the documents by the request
+# page for the submission of the documents by the request
 @app.route("/submission/<token>", methods=['GET', 'POST'])
 def submission(token):
 
     # call db
     db = get_db()
+
+    submitter_id = session.get("id")
+    sub_user = db.execute("SELECT * FROM submitting_users WHERE id = ?", (submitter_id,)).fetchone()
 
     # get data of the request
     doc_request = db.execute("SELECT * FROM requests WHERE token = ?", (token,)).fetchone()
@@ -966,7 +970,7 @@ def submission(token):
             })
     
         
-    return render_template("submission.html", project_name=project_name, doc_request=doc_request, required_docs=docs_to_display)
+    return render_template("submission.html", project_name=project_name, doc_request=doc_request, required_docs=docs_to_display, sub_user=sub_user)
 
 
 
@@ -1028,8 +1032,11 @@ def company_information():
     # connect db
     db = get_db()
 
+    
+
     # get current user id
     user_id = session.get("id")
+    sub_user = db.execute("SELECT * FROM submitting_users WHERE id = ?", (user_id,)).fetchone()
     
     # redirects to login if none
     if not user_id:
@@ -1053,7 +1060,7 @@ def company_information():
     user = db.execute("SELECT * FROM submitting_users WHERE id = ?", (user_id,)).fetchone()
 
     
-    return render_template("sub_company_information.html", user=user)
+    return render_template("sub_company_information.html", user=user, sub_user=sub_user)
 
 
 

@@ -1,18 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Admin Panel</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
+{% extends "sub_layout.html" %}
 
-    <nav style="background-color: #f0f0f0; padding: 10px;">
-        <a href="/submitter_dashboard" style="margin-right: 15px;">Dashboard</a>
-        <a href="/sub_company_information" style="margin-right: 15px;">Company Information</a>
-        <a href="/logout">Log Out</a>
-    </nav>
+{% block title %}Projects{% endblock %}
 
+{% block content %}
     <h2>Hello, {{ submitter['login'] }}</h2>
 
 
@@ -41,5 +31,4 @@
         {% endfor %}
     </table>
 
-</body>
-</html>
+{% endblock %}

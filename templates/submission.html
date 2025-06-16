@@ -1,30 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Submit Required Documents</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        .upload-area {
-            margin-top: 10px;
-            padding: 15px;
-            background-color: #f0f8ff;
-            border: 1px solid #cce5ff;
-            border-radius: 5px;
-        }
+{% extends "sub_layout.html" %}
 
-        .upload-area input[type="file"] {
-            margin-bottom: 10px;
-        }
-    </style>
-</head>
-<body>
+{% block title %}Projects{% endblock %}
 
-    <nav style="background-color: #f0f0f0; padding: 10px;">
-        <a href="/submitter_dashboard" style="margin-right: 15px;">Dashboard</a>
-        <a href="/logout">Log Out</a>
-    </nav>
-
+{% block content %}
+    
     <h2>Documents Submission</h2>
     <h3>Submission Title: {{ doc_request["name"] }}</h3>
     <h3>Project: {{ project_name["project_name"] }}</h3>
@@ -89,6 +68,5 @@
         <button type="submit">Submit All</button>
     </form>
 
-</body>
-</html>
+{% endblock %}
 

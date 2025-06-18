@@ -1223,8 +1223,41 @@ def expiry_notification():
 
 
 
+### TRANSITIONS ###
 
+@app.route("/admin_sub")
+def admin_sub():
 
+    db = get_db()
+
+    # checking who is logged
+
+    user_id = session.get("id")
+
+    if session.get("admin") == True:
+
+        sub = db.execute("SELECT * FROM submitting_users WHERE id = ?", (user_id,)).fetchone()
+
+        if sub:
+            session.clear()
+            session["submitter"] = True
+            session["id"] = sub["id"]
+            return redirect("/submitter_dashboard")
+        else:
+            return redirect("/login")
+
+    elif session.get("submitter") == True:
+        admin = db.execute("SELECT * FROM admin_users WHERE id = ?", (user_id,)).fetchone()
+        if admin:
+            session.clear()
+            session["admin"] = True
+            session["id"] = admin["id"]
+            return redirect("/admin")
+        else:
+            return redirect("/login")
+        
+    else:
+        return redirect("/login")
 
 
 

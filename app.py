@@ -111,6 +111,7 @@ def registration():
         password = request.form.get("password")
         password2 = request.form.get("password2")
         email = request.form.get("email")
+        token = secrets.token_urlsafe(10)
 
         existing = db.execute("SELECT * FROM admin_users WHERE login = ? OR email = ?", (login, email)).fetchone()
 
@@ -131,7 +132,8 @@ def registration():
                 hashed_password = generate_password_hash(password)
                 
                 # create new user in db
-                db.execute("INSERT INTO admin_users (name, login, password, email) VALUES (?, ?, ?, ?)", (company_name, login, hashed_password, email))
+                db.execute("INSERT INTO admin_users (name, login, password, email, token) VALUES (?, ?, ?, ?, ?)", (company_name, login, hashed_password, email, token))
+                db.execute("INSERT INTO submitting_users (name, login, password, email, token) VALUES (?, ?, ?, ?, ?)", (company_name, login, hashed_password, email, token))
                 db.commit()
 
                 # sands back to login
@@ -296,6 +298,7 @@ def my_submitters():
         else:
             # adding new user dummy data
             cur = db.execute("INSERT INTO submitting_users (login, password, email, token, name) VALUES (?, ?, ?, ?, ?)", (str(randint(1, 1000)), str(randint(1, 1000)), email.strip().lower(), new_token, name))
+            db.execute("INSERT INTO admin_users (login, password, email, token, name) VALUES (?, ?, ?, ?, ?)", (str(randint(1, 1000)), str(randint(1, 1000)), email.strip().lower(), new_token, name))
             sub_id = cur.lastrowid
 
             db.execute("INSERT INTO admin_submitters (admin_id, submitter_id) VALUES (?, ?)", (user_id, sub_id))
@@ -1225,7 +1228,7 @@ def expiry_notification():
 
 ### TRANSITIONS ###
 
-@app.route("/admin_sub")
+@app.route("/admin_sub/")
 def admin_sub():
 
     db = get_db()
@@ -1236,7 +1239,10 @@ def admin_sub():
 
     if session.get("admin") == True:
 
-        sub = db.execute("SELECT * FROM submitting_users WHERE id = ?", (user_id,)).fetchone()
+        token = db.execute("SELECT token FROM admin_users WHERE id = ?", (user_id,)).fetchone()
+        sub = db.execute("SELECT * FROM submitting_users WHERE token = ?", (token["token"],)).fetchone()
+        print(token["token"])
+        print(token)
 
         if sub:
             session.clear()
@@ -1247,7 +1253,9 @@ def admin_sub():
             return redirect("/login")
 
     elif session.get("submitter") == True:
-        admin = db.execute("SELECT * FROM admin_users WHERE id = ?", (user_id,)).fetchone()
+        token = db.execute("SELECT token FROM submitting_users WHERE id = ?", (user_id,)).fetchone()
+        admin = db.execute("SELECT * FROM admin_users WHERE token = ?", (token["token"],)).fetchone()
+        print(token)
         if admin:
             session.clear()
             session["admin"] = True
@@ -1258,8 +1266,6 @@ def admin_sub():
         
     else:
         return redirect("/login")
-
-
 
 
 

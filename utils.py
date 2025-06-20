@@ -10,7 +10,9 @@ def main():
 def ex_check(name, allowed):
     for ex in allowed:
         if name.endswith(f".{ex.lower()}"):
+            print("good")
             return True
+        print("no good")
     return False
 
 

@@ -281,7 +281,7 @@ def my_submitters():
 
         # creating token and requesting new invited user's email
         new_token = str(uuid.uuid4())
-        name = None
+        name = request.form.get("name")
         email = request.form.get("email")
 
         # check if user with email exists
@@ -685,14 +685,15 @@ def delete_sub():
     # call db
     db = get_db()
     # gets user's token
+    admin_id = session.get("id")
     token = request.form.get("token")
-    sub = db.execute("SELECT name FROM submitting_users WHERE token = ?", (token,)).fetchone()
+    sub = db.execute("SELECT name, id FROM submitting_users WHERE token = ?", (token,)).fetchone()
     
 
     # if got, deletes this user from the db
     if token:
         flash(f"Submitter {sub['name']} has been successfully deleted.")
-        db.execute("DELETE FROM submitting_users WHERE token = ?", (token,))
+        db.execute("DELETE FROM admin_submitters WHERE admin_id = ? AND submitter_id = ?", (admin_id, sub["id"]))
         db.commit()
         
     return redirect("/my_submitters")
@@ -760,15 +761,12 @@ def submitter_registration(token):
         login = request.form.get("login")
         password = request.form.get("password")
         password2 = request.form.get("password2")
-        print(token)
 
         if login and password and password2 and submitter:
             if password == password2:
                 
                 hashed_password = generate_password_hash(password)
-                print("Login:", login)
-                print("Password1:", password)
-                print("Password2:", password2)
+                
 
             # create new user in db
                 db.execute("UPDATE submitting_users SET login = ?, password = ? WHERE token = ?", (login, hashed_password, token))
@@ -884,9 +882,9 @@ def submission(token):
     # if user submits the form
     if request.method == "POST":
        
-
         # looping through required docs
         for doc in required_docs:
+
             # getting doc type
             doc_type = doc["doc_type"]
             # gets the file

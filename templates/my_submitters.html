@@ -9,6 +9,7 @@
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
+            <input type="text" name="name" placeholder="Submitter Name" autocomplete="off" required>
             <input type="email" name="email" placeholder="Submitter Email" required>
         </div>
         <button type="submit">Add Submitter</button>

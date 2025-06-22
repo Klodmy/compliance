@@ -15,60 +15,47 @@
         </ul>
     {% endif %}
     {% endwith %}
-    <h2>Register as General Contractor</h2>
-
-    <form method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input
-            type="text"
-            name="company_name"
-            placeholder="Company Name"
-            required
-            minlength="2"
-            maxlength="20"
-            pattern="[a-zA-Z0-9]+"
-            title="4-20 characters, letters and numbers only"
-        >
 
 
-        <input
-            type="text"
-            name="login"
-            placeholder="Username"
-            required
-            minlength="4"
-            maxlength="20"
-            pattern="[a-zA-Z0-9]+"
-            title="4-20 characters, letters and numbers only"
-        >
+    <div class="reg_form">
 
-        <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            required
-        >
+         <form method="POST" autocomplete="off">
 
-        <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            required
-            minlength="6"
-            title="Minimum 6 characters"
-        >
+            <h3>Mandatory fields:</h3>
 
-        <input
-            type="password"
-            name="password2"
-            placeholder="Confirm Password"
-            required
-            minlength="6"
-            title="Must match the password above"
-        >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>Login:</label><br>
+            <input type="text" name="login" required autocomplete="off"><br><br>
 
-        <button type="submit">Register</button>
-    </form>
+            <label>Email:</label><br>
+            <input type="text" name="email" required><br><br>
+
+            <label>Password:</label><br>
+            <input type="password" name="password" required autocomplete="off"><br><br>
+
+            <label>Confirm Password:</label><br>
+            <input type="password" name="password2" required autocomplete="off"><br><br>
+            
+            <h3 style="margin-top: 15px;">Optional fields:</h3>
+
+            <label>Company Name:</label><br>
+            <input type="text" name="name" autocomplete="off"><br><br>
+
+            <label>Description:</label><br>
+            <input type="text" name="description" autocomplete="off"><br><br>
+
+            <label>Phone:</label><br>
+            <input type="text" name="phone" autocomplete="off"><br><br>
+
+            <label>Address:</label><br>
+            <input type="text" name="address" autocomplete="off"><br><br>
+
+            <button type="submit">Register</button>
+
+       </form>
+
+    </div>
+
 
 </body>
 </html>

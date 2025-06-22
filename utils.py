@@ -8,11 +8,10 @@ def main():
 
 # checks file names to define if submitted format is allowed
 def ex_check(name, allowed):
+    name = name.lower()
     for ex in allowed:
         if name.endswith(f".{ex.lower()}"):
-            print("good")
             return True
-        print("no good")
     return False
 
 

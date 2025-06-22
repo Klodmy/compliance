@@ -26,14 +26,14 @@ csfr.init_app(app)
 
 # set uploads folder and allowed extensions, set email password
 UPLOAD_FOLDER = "uploads"
-ALLOWED_EXTENSIONS = ["pdf", "png", "jpg", "jpeg"]
+ALLOWED_EXTENSIONS = ["pdf", "png", "jpg", "jpeg"] 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 email_password = os.environ.get("EMAIL_APP_PASSWORD")
 load_dotenv()
 
 # connects database
 def get_db():
-    conn = sqlite3.connect("database.db")
+    conn = sqlite3.connect("database.db", timeout=10)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -106,11 +106,15 @@ def registration():
     if request.method == "POST":
 
         # getting new credentials 
-        company_name = request.form.get("company_name")
+        # getting new credentials 
         login = request.form.get("login")
         password = request.form.get("password")
         password2 = request.form.get("password2")
+        company_name = request.form.get("company_name")
+        description = request.form.get("description")
         email = request.form.get("email")
+        phone = request.form.get("phone")
+        address = request.form.get("address")
         token = secrets.token_urlsafe(10)
 
         existing = db.execute("SELECT * FROM admin_users WHERE login = ? OR email = ?", (login, email)).fetchone()
@@ -132,8 +136,8 @@ def registration():
                 hashed_password = generate_password_hash(password)
                 
                 # create new user in db
-                db.execute("INSERT INTO admin_users (name, login, password, email, token) VALUES (?, ?, ?, ?, ?)", (company_name, login, hashed_password, email, token))
-                db.execute("INSERT INTO submitting_users (name, login, password, email, token) VALUES (?, ?, ?, ?, ?)", (company_name, login, hashed_password, email, token))
+                db.execute("INSERT INTO admin_users (login, password, name, description, email, phone, address, token) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (login, hashed_password, company_name, description, email, phone, address, token))
+                db.execute("INSERT INTO submitting_users (login, password, name, description, email, phone, address, token) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (login, hashed_password, company_name, description, email, phone, address, token))
                 db.commit()
 
                 # sands back to login
@@ -761,6 +765,11 @@ def submitter_registration(token):
         login = request.form.get("login")
         password = request.form.get("password")
         password2 = request.form.get("password2")
+        company_name = request.form.get("company_name")
+        description = request.form.get("description")
+        email = request.form.get("email")
+        phone = request.form.get("phone")
+        address = request.form.get("address")
 
         if login and password and password2 and submitter:
             if password == password2:
@@ -769,14 +778,14 @@ def submitter_registration(token):
                 
 
             # create new user in db
-                db.execute("UPDATE submitting_users SET login = ?, password = ? WHERE token = ?", (login, hashed_password, token))
+                db.execute("UPDATE submitting_users SET login = ?, password = ?, name = ?, description = ?, email = ?, phone = ?, address = ? WHERE token = ?", (login, hashed_password, company_name, description, email, phone, address, token))
                 db.commit()
 
                 # sands back to login
                 return redirect("/submitter_login")
 
     # rendering registration page       
-    return render_template("submitter_registration.html")
+    return render_template("submitter_registration.html", submitter=submitter)
 
 
 
@@ -892,8 +901,11 @@ def submission(token):
 
             # checks if there is file, it has name and extension is allowed
             if file and file.filename and ex_check(file.filename, ALLOWED_EXTENSIONS):
+
+                # saves current file name
+                safe_name = secure_filename(file.filename)
                 # assign file name in readable format
-                filename = f"{session['id']}_{doc_type}_{file.filename}"
+                filename = f"{session['id']}_{doc_type}_{safe_name}"
                 # join upload folder and new file name
                 filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
                 # saves expiry date

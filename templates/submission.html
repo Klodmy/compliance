@@ -49,8 +49,7 @@
                             <label for="{{ doc['doc_type'] }}_expiry">Expiry Date (Required):</label><br>
                             <input type="date" name="{{ doc['doc_type'] }}_expiry" required><br>
                         {% else %}
-                            <label for="{{ doc['doc_type'] }}_expiry">Expiry Date (Optional):</label><br>
-                            <input type="date" name="{{ doc['doc_type'] }}_expiry"><br>
+                            <p></p>
                         {% endif %}
 
                         {% if doc["id"] %}

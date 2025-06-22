@@ -10,15 +10,35 @@
     <h1>Submitter Registration</h1>
 
     <form method="POST">
+
+        <h3>Mandatory fields:</h3>
+
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label>Login:</label><br>
         <input type="text" name="login" required><br><br>
+
+        <label>Email:</label><br>
+        <input type="text" name="email" required value="{{ submitter['email'] }}"><br><br>
 
         <label>Password:</label><br>
         <input type="password" name="password" required><br><br>
 
         <label>Confirm Password:</label><br>
         <input type="password" name="password2" required><br><br>
+        
+        <h3>Optional fields:</h3>
+
+        <label>Company Name</label><br>
+        <input type="text" name="name"><br><br>
+
+        <label>Description:</label><br>
+        <input type="text" name="description"><br><br>
+
+        <label>Phone:</label><br>
+        <input type="text" name="phone"><br><br>
+
+        <label>Address:</label><br>
+        <input type="text" name="address"><br><br>
 
         <button type="submit">Register</button>
     </form>

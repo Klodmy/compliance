@@ -1039,7 +1039,7 @@ def delete_doc(doc_id):
 
 
 
-@app.route("/sub_company_information", methods=['GET', 'POST'])
+@app.route("/company_information", methods=['GET', 'POST'])
 def company_information():
 
     # connect db
@@ -1049,11 +1049,21 @@ def company_information():
 
     # get current user id
     user_id = session.get("id")
+    admin_user = db.execute("SELECT * FROM admin_users WHERE id = ?", (user_id,)).fetchone()
     sub_user = db.execute("SELECT * FROM submitting_users WHERE id = ?", (user_id,)).fetchone()
+
+    if admin_user:
+        user = admin_user
+        role = "admin"
+    elif sub_user:
+        user = sub_user
+        role = "sub"
+    else:
+        return redirect("/login")
     
     # redirects to login if none
     if not user_id:
-        return redirect("/submitter_login")
+        return redirect("/login")
 
     if request.method == "POST":
 
@@ -1065,15 +1075,17 @@ def company_information():
         phone = request.form.get("phone")
 
         # inserts into db
-        db.execute("UPDATE submitting_users SET name = ?, description = ?, email = ?, address = ?, phone = ? WHERE id = ?", (name, description, email, address, phone, user_id))
+        db.execute("UPDATE admin_users SET name = ?, description = ?, email = ?, address = ?, phone = ? WHERE token = ?", (name, description, email, address, phone, user['token']))
+        db.execute("UPDATE submitting_users SET name = ?, description = ?, email = ?, address = ?, phone = ? WHERE token = ?", (name, description, email, address, phone, user['token']))
         db.commit()
         flash("Information successfully updated.")
 
-    # gets info about user
-    user = db.execute("SELECT * FROM submitting_users WHERE id = ?", (user_id,)).fetchone()
+    if role == "admin":
+        return render_template("company_information.html", user=user)
+    else:
+        return render_template("sub_company_information.html", user=user)
 
     
-    return render_template("sub_company_information.html", user=user, sub_user=sub_user)
 
 
 

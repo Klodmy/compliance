@@ -209,11 +209,33 @@ tr:nth-child(even) {
 .reg_form {
     display: flex;
     justify-content: center;
+    height: 100%;
 }
 
+.my_form {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background-color: #f9f9f9;
+    border-radius: 6px;
+    margin-top: 3%;
+    padding: 2%;
+    max-width: 10%;
+}
+
+
+.big_logo {
+    height: 150px;
+    filter: invert(100%);
+    padding: 0px;
+    margin: 0px;
+}
+
+
+
 form {
-    width: 20%;
-    margin: 30px;
+    width:95%;
+    margin: 10px;
     padding: 50px;
     background-color: #fdfdfd;
     border-radius: 8px;
@@ -260,6 +282,12 @@ h1, h2, h3 {
     font-size: 16px;
     margin-bottom: 10px;
 }
+
+.form-group {
+    margin-bottom: 5px;
+    width: 90%;
+}
+
 
 .form-group {
     margin-bottom: 5px;

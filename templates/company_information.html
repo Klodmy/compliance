@@ -1,4 +1,4 @@
-{% extends "sub_layout.html" %}
+{% extends "layout.html" %}
 
 {% block title %}Projects{% endblock %}
 
@@ -19,21 +19,21 @@
         <form method="post">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-            <label for="company_name">Company Name</label>
+            <label for="company_name"><strong>Company Name</strong></label>
             <input type="text" name="company_name" id="company_name" value="{{ user.name }}" required>
 
-            <label for="company_information">Description</label>
+            <label for="company_information"><strong>Description</strong></label>
             <textarea name="company_information" id="company_information" rows="4">{{ user.description }}</textarea>
 
-            <label for="email">Email</label>
+            <label for="email"><strong>Email</strong></label>
             <input type="email" name="email" id="email" value="{{ user.email }}" required>
 
-            <label for="address">Address</label>
+            <label for="address"><strong>Address</strong></label>
             <input type="text" name="address" id="address" value="{{ user.address }}">
 
-            <label for="phone">Phone</label>
+            <label for="phone"><strong>Phone</strong></label>
             <input type="text" name="phone" id="phone" value="{{ user.phone }}">
-
+            <br>
             <button type="submit">Update Information</button>
         </form>
     </div>

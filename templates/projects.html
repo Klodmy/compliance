@@ -19,6 +19,7 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="text" name="project_number" placeholder="Project Number" autocomplete="off" required>
         <input type="text" name="project_name" placeholder="Project Name" autocomplete="off" required>
+        <br>
         <button type="submit">Add Project</button>
     </form>
 
@@ -30,7 +31,7 @@
         {% for project in projects|reverse %}
             <li><strong>{{ project.project_number }}</strong>: {{ project.project_name }}</li>
         {% else %}
-            <li>No projects yet.</li>
+            <p>No projects yet.</p>
         {% endfor %}
     </ul>
 

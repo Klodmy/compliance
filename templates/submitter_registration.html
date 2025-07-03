@@ -9,39 +9,42 @@
 
     <h1>Submitter Registration</h1>
 
-    <form method="POST">
+    <div class="reg_form">
 
-        <h3>Mandatory fields:</h3>
+         <form class="my_form" method="POST" autocomplete="off">
 
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <label>Login:</label><br>
-        <input type="text" name="login" required><br><br>
+            <h3>Mandatory fields:</h3>
 
-        <label>Email:</label><br>
-        <input type="text" name="email" required value="{{ submitter['email'] }}"><br><br>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>Login:</label>
+            <input type="text" name="login" required autocomplete="off">
 
-        <label>Password:</label><br>
-        <input type="password" name="password" required><br><br>
+            <label>Email:</label>
+            <input type="text" name="email" required>
 
-        <label>Confirm Password:</label><br>
-        <input type="password" name="password2" required><br><br>
-        
-        <h3>Optional fields:</h3>
+            <label>Password:</label>
+            <input type="password" name="password" required autocomplete="off">
 
-        <label>Company Name</label><br>
-        <input type="text" name="name"><br><br>
+            <label>Confirm Password:</label>
+            <input type="password" name="password2" required autocomplete="off">
+            
+            <h3 style="margin-top: 15px;">Optional fields:</h3>
 
-        <label>Description:</label><br>
-        <input type="text" name="description"><br><br>
+            <label>Company Name:</label>
+            <input type="text" name="name" autocomplete="off">
 
-        <label>Phone:</label><br>
-        <input type="text" name="phone"><br><br>
+            <label>Description:</label>
+            <input type="text" name="description" autocomplete="off">
 
-        <label>Address:</label><br>
-        <input type="text" name="address"><br><br>
+            <label>Phone:</label>
+            <input type="text" name="phone" autocomplete="off">
 
-        <button type="submit">Register</button>
-    </form>
+            <label>Address:</label>
+            <input type="text" name="address" autocomplete="off">
+            <br>
+            <button type="submit">Register</button>
+
+       </form>
 
     <br>
     <a href="/submitter_login">Already registered? Login here</a>

@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, session, redirect, url_for, flash
+from flask import Flask, request, render_template, session, redirect, url_for, flash, g
 import sqlite3
 import uuid
 from utils import ex_check, send_email, get_submission_status
@@ -11,6 +11,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
+import psycopg2.extras
 from flask_wtf.csrf import CSRFProtect
 
 
@@ -33,9 +34,17 @@ load_dotenv()
 
 # connects database
 def get_db():
-    conn = sqlite3.connect("database.db", timeout=10)
-    conn.row_factory = sqlite3.Row
-    return conn
+    if 'db' not in g:
+        g.db = psycopg2.connect(
+            os.getenv("DATABASE_URL"),
+            cursor_factory=psycopg2.extras.RealDictCursor
+        )
+    return g.db
+
+def close_db(exception):
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
 
 
 
@@ -50,7 +59,7 @@ def get_db():
 def login():
 
     # call db
-    db = get_db()
+    db = get_db().cursor()
 
     # allows new user to go and register
     if request.method == "POST":
@@ -62,8 +71,8 @@ def login():
         form_password = request.form["password"]
 
         # getting user by login
-        user = db.execute("SELECT * FROM admin_users WHERE login = ?", (form_login, )).fetchone()
-
+        db.execute("SELECT * FROM admin_users WHERE login = %s", (form_login, ))
+        user = db.fetchone()
         # checking user's password, redirects to admin panel if ok
         if user and check_password_hash(user["password"], form_password):
             session["admin"] = True
@@ -101,7 +110,8 @@ def logout():
 def registration():
 
     # call db
-    db = get_db()
+    con = get_db()
+    db = get_db().cursor()
     
     if request.method == "POST":
 
@@ -117,7 +127,8 @@ def registration():
         address = request.form.get("address")
         token = secrets.token_urlsafe(10)
 
-        existing = db.execute("SELECT * FROM admin_users WHERE login = ? OR email = ?", (login, email)).fetchone()
+        db.execute("SELECT * FROM admin_users WHERE login = %s OR email = %s", (login, email))
+        existing = db.fetchone()
 
         if existing:
             if existing["login"] == login:
@@ -136,9 +147,9 @@ def registration():
                 hashed_password = generate_password_hash(password)
                 
                 # create new user in db
-                db.execute("INSERT INTO admin_users (login, password, name, description, email, phone, address, token) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (login, hashed_password, company_name, description, email, phone, address, token))
-                db.execute("INSERT INTO submitting_users (login, password, name, description, email, phone, address, token) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (login, hashed_password, company_name, description, email, phone, address, token))
-                db.commit()
+                db.execute("INSERT INTO admin_users (login, password, name, description, email, phone, address, token) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (login, hashed_password, company_name, description, email, phone, address, token))
+                db.execute("INSERT INTO submitting_users (login, password, name, description, email, phone, address, token) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (login, hashed_password, company_name, description, email, phone, address, token))
+                con.commit()
 
                 # sands back to login
                 return redirect("/login")
@@ -166,7 +177,8 @@ def main():
 def admin():
 
     # db call, gets admin's id
-    db = get_db()
+    con = get_db()
+    db = get_db().cursor()
     user_id = session.get("id")
     
 
@@ -179,8 +191,8 @@ def admin():
 
 
         if request.form.get("delete"):
-            db.execute("DELETE FROM requests WHERE id = ?", (request.form.get("delete"),))
-            db.commit()
+            db.execute("DELETE FROM requests WHERE id = %s", (request.form.get("delete"),))
+            con.commit()
             flash("Request deleted.")
             return redirect("/admin")
         
@@ -196,18 +208,28 @@ def admin():
             if project and sub and doc_set:
                 
                 # assigning this to variable in order to get ID later on
-                cur = db.execute("INSERT INTO requests (name, description, project_id, submitter_id, requirement_set_id, admin_id, token) VALUES (?, ?, ?, ?, ?, ?, ?)", (request_name, description, project, sub, doc_set, user_id, token))
-                db.commit()
+                db.execute("INSERT INTO requests (name, description, project_id, submitter_id, requirement_set_id, admin_id, token) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id", (request_name, description, project, sub, doc_set, user_id, token))
+                con.commit()
 
                 # gets ID of the last added row
-                request_id = cur.lastrowid
+                request_id = db.fetchone()["id"]
 
                 # get data to send email
-                user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
-                company_name = db.execute("SELECT name FROM admin_users WHERE id = ?", (user_id,)).fetchone()
-                submitter_email = db.execute("SELECT email FROM submitting_users WHERE id = ?", (sub,)).fetchone()
-                the_project = db.execute("SELECT project_name FROM project WHERE id = ?", (project,)).fetchone()
-                sub_token = db.execute("SELECT token FROM submitting_users WHERE id = ?", (sub,)).fetchone()
+                db.execute("SELECT login FROM admin_users WHERE id = %s", (user_id,))
+                user_name = db.fetchone()
+
+                db.execute("SELECT name FROM admin_users WHERE id = %s", (user_id,))
+                company_name = db.fetchone()
+
+                db.execute("SELECT email FROM submitting_users WHERE id = %s", (sub,))
+                submitter_email = db.fetchone()
+
+                db.execute("SELECT project_name FROM project WHERE id = %s", (project,))
+                the_project = db.fetchone()
+
+                db.execute("SELECT token FROM submitting_users WHERE id = %s", (sub,))
+                sub_token = db.fetchone()
+
 
                 # body of the email in case reveiving browser does not render html
                 body = f"You have a submittal request from {user_name['login']}. Please follow the following link to login: http://127.0.0.1:5000/submitter_login"
@@ -237,19 +259,31 @@ def admin():
 
 
    # getting admin, submitters, projects
-    user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
-    user = db.execute("SELECT * FROM admin_users WHERE id = ?", (session["id"],)).fetchone()
-    subs = db.execute("""SELECT submitting_users.*,
+
+    db.execute("SELECT login FROM admin_users WHERE id = %s", (user_id,))
+    user_name = db.fetchone()
+
+    db.execute("SELECT * FROM admin_users WHERE id = %s", (session["id"],))
+    user = db.fetchone()
+
+    db.execute("""SELECT submitting_users.*,
                     admin_submitters.submitter_id
                     FROM submitting_users
                     JOIN admin_submitters
                     ON admin_submitters.submitter_id = submitting_users.id
-                    WHERE admin_submitters.admin_id = ?""", (session["id"],)).fetchall()
-    projects = db.execute("SELECT * FROM project WHERE project_admin_id = ?", (user_id,)).fetchall()
-    sets = db.execute("SELECT * FROM requirement_sets WHERE admin_user_id = ?", (user_id,)).fetchall()
-    requests = db.execute("SELECT * FROM requests").fetchall()
+                    WHERE admin_submitters.admin_id = %s""", (session["id"],))
+    subs = db.fetchall()
 
-    this_req = db.execute("""
+    db.execute("SELECT * FROM project WHERE project_admin_id = %s", (user_id,))
+    projects = db.fetchall()
+
+    db.execute("SELECT * FROM requirement_sets WHERE admin_user_id = %s", (user_id,))
+    sets = db.fetchall()
+
+    db.execute("SELECT * FROM requests")
+    requests = db.fetchall()
+
+    db.execute("""
                         SELECT 
                             project.project_number, 
                             project.project_name, 
@@ -262,8 +296,10 @@ def admin():
                         FROM requests
                         JOIN project ON requests.project_id = project.id
                         JOIN submitting_users ON requests.submitter_id = submitting_users.id
-                        WHERE requests.admin_id = ?
-                        """, (session.get('id'),)).fetchall()
+                        WHERE requests.admin_id = %s
+                        """, (session.get('id'),))
+    
+    this_req = db.fetchall()
 
     return render_template("admin.html", user_name=user_name, user=user, subs=subs, projects=projects, sets=sets, requests=requests, this_req=this_req)
 
@@ -277,9 +313,12 @@ def my_submitters():
     if not session.get("admin"):
         return redirect("/login")
 
-    db = get_db()
+    con = get_db()
+    db = get_db().cursor()
+
     user_id = session.get("id")
-    user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
+    db.execute("SELECT login FROM admin_users WHERE id = %s", (user_id,))
+    user_name = db.fetchone()
 
     if request.method == "POST":
 
@@ -289,31 +328,36 @@ def my_submitters():
         email = request.form.get("email")
 
         # check if user with email exists
-        existing_subs = db.execute("SELECT * FROM submitting_users WHERE email = ?", (email.strip().lower(),)).fetchone()
+        db.execute("SELECT * FROM submitting_users WHERE email = %s", (email.strip().lower(),))
+        existing_subs = db.fetchone()
+
         if existing_subs:
             # check if already linked to admin
-            already_taken = db.execute("SELECT * FROM admin_submitters WHERE admin_id = ? AND submitter_id = ?", (user_id, existing_subs["id"])).fetchone()
+            db.execute("SELECT * FROM admin_submitters WHERE admin_id = %s AND submitter_id = %s", (user_id, existing_subs["id"]))
+            already_taken = db.fetchone()
+
             # links if not
             if not already_taken:
-                db.execute("INSERT INTO admin_submitters (admin_id, submitter_id) VALUES (?, ?)", (user_id, existing_subs["id"]))
+                db.execute("INSERT INTO admin_submitters (admin_id, submitter_id) VALUES (%s, %s)", (user_id, existing_subs["id"]))
             # passes if it is
             else:
                 pass
         else:
             # adding new user dummy data
-            cur = db.execute("INSERT INTO submitting_users (login, password, email, token, name) VALUES (?, ?, ?, ?, ?)", (str(randint(1, 1000)), str(randint(1, 1000)), email.strip().lower(), new_token, name))
-            db.execute("INSERT INTO admin_users (login, password, email, token, name) VALUES (?, ?, ?, ?, ?)", (str(randint(1, 1000)), str(randint(1, 1000)), email.strip().lower(), new_token, name))
-            sub_id = cur.lastrowid
-
-            db.execute("INSERT INTO admin_submitters (admin_id, submitter_id) VALUES (?, ?)", (user_id, sub_id))
+            db.execute("INSERT INTO submitting_users (login, password, email, token, name) VALUES (%s, %s, %s, %s, %s) RETURNING id", (str(randint(1, 1000)), str(randint(1, 1000)), email.strip().lower(), new_token, name))
+            sub_id = db.fetchone()["id"]
+            db.execute("INSERT INTO admin_users (login, password, email, token, name) VALUES (%s, %s, %s, %s, %s)", (str(randint(1, 1000)), str(randint(1, 1000)), email.strip().lower(), new_token, name))
             
 
-        db.commit()  
+            db.execute("INSERT INTO admin_submitters (admin_id, submitter_id) VALUES (%s, %s)", (user_id, sub_id))
+            
+
+        con.commit()  
         flash(f"Submitter {name} was successfully added.")
         return redirect("/my_submitters")
     
     # get existing submitters
-    submitters = db.execute("""
+    db.execute("""
                             SELECT 
                             submitting_users.name, 
                             submitting_users.email, 
@@ -321,9 +365,11 @@ def my_submitters():
                             admin_submitters.submitter_id
                             FROM submitting_users
                             JOIN admin_submitters ON submitting_users.id = admin_submitters.submitter_id
-                            WHERE admin_submitters.admin_id  = ?
-""", (user_id,)).fetchall()
-    print(submitters)
+                            WHERE admin_submitters.admin_id  = %s
+""", (user_id,))
+    submitters = db.fetchall()
+
+    
     return render_template("my_submitters.html", submitters=submitters, user_name=user_name)
 
 
@@ -337,9 +383,11 @@ def documents_library():
         return redirect("/login")
 
     # call db, get user id
-    db = get_db()
+    con = get_db()
+    db = get_db().cursor()
     user_id = session.get("id")
-    user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
+    db.execute("SELECT login FROM admin_users WHERE id = %s", (user_id,))
+    user_name = db.fetchone()
 
     if request.method == "POST":
 
@@ -349,13 +397,13 @@ def documents_library():
 
         # verifies if checkbox of expiry required is checked
         if request.form.get("expiry_required") == "on":
-            expiry_required = 1
+            expiry_required = True
         else:
-            expiry_required = 0
+            expiry_required = False
 
         # insert results into db
-        db.execute("INSERT INTO users_docs (name, description, expiry_required, user_id) VALUES (?, ?, ?, ?)", (doc_name, doc_description, expiry_required, user_id))
-        db.commit()
+        db.execute("INSERT INTO users_docs (name, description, expiry_required, user_id) VALUES (%s, %s, %s, %s)", (doc_name, doc_description, expiry_required, user_id))
+        con.commit()
 
         flash("Document was successfully added.")
         
@@ -363,7 +411,8 @@ def documents_library():
         return redirect("/documents_library")
 
     # get existing docs to display
-    docs = db.execute("SELECT id, name, description, expiry_required FROM users_docs WHERE user_id  = ?", (user_id,)).fetchall()
+    db.execute("SELECT id, name, description, expiry_required FROM users_docs WHERE user_id  = %s", (user_id,))
+    docs = db.fetchall()
 
     return render_template("documents_library.html", docs=docs, user_name=user_name)
 
@@ -377,30 +426,34 @@ def my_sets():
     if not session.get("admin"):
         return redirect("/login")
 
-    db = get_db()
+    con = get_db()
+    db = get_db().cursor()
 
     # gets current user id
     user_id = session["id"]
-    user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
+    db.execute("SELECT login FROM admin_users WHERE id = %s", (user_id,))
+    user_name = db.fetchone()
 
     if request.method == "POST":
 
         requirement_set = request.form.get("new_set_name")
 
-        db.execute("INSERT INTO requirement_sets (admin_user_id, name) VALUES (?, ?)", (user_id, requirement_set))
-        db.commit()
+        db.execute("INSERT INTO requirement_sets (admin_user_id, name) VALUES (%s, %s)", (user_id, requirement_set))
+        con.commit()
 
         flash("Set was created successfully.")
     
     # gets all doc sets this user has
-    doc_sets = db.execute("SELECT id, name FROM requirement_sets WHERE admin_user_id = ?", (user_id, )).fetchall()
+    db.execute("SELECT id, name FROM requirement_sets WHERE admin_user_id = %s", (user_id, ))
+    doc_sets = db.fetchall()
 
     # loops through requirement sets and gets docs in them and adds to the dict
     docs_by_set = {}
 
     for doc_set in doc_sets:
         set_id = doc_set["id"]
-        docs = db.execute("SELECT doc_type FROM requirements WHERE set_id = ?", (set_id,)).fetchall()
+        db.execute("SELECT doc_type FROM requirements WHERE set_id = %s", (set_id,))
+        docs = db.fetchall()
         docs_by_set[set_id] = docs
 
     return render_template("my_sets.html", doc_sets=doc_sets, docs_by_set=docs_by_set, user_name=user_name)
@@ -415,17 +468,20 @@ def edit_set(set_id):
     if not session.get("admin"):
         return redirect("/login")
 
-    db = get_db()
+    con = get_db()
+    db = get_db().cursor()
     user_id = session.get("id")
-    user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
+    db.execute("SELECT login FROM admin_users WHERE id = %s", (user_id,))
+    user_name = db.fetchone()
 
     # get docs created by user
-    all_docs = db.execute("SELECT * FROM users_docs WHERE user_id = ?", (user_id,)).fetchall()
+    db.execute("SELECT * FROM users_docs WHERE user_id = %s", (user_id,))
+    all_docs = db.fetchall()
 
     if request.method == "POST":
 
         # deletes previous required docs if any
-        db.execute("DELETE FROM requirements WHERE set_id = ?", (set_id,))
+        db.execute("DELETE FROM requirements WHERE set_id = %s", (set_id,))
 
         selected = {}
 
@@ -435,19 +491,20 @@ def edit_set(set_id):
                 # checks if added doc is required during submission
                 is_required = request.form.get(f"is_required_{doc['name']}") == "on"
 
-                selected[doc["name"]] = int(is_required)
+                selected[doc["name"]] = is_required
             
 
         # inserting chosen docs in the set db
         for doc_name, is_required in selected.items():
 
             # check if expiration is required
-            ex_req = db.execute("SELECT expiry_required FROM users_docs WHERE name = ? AND user_id = ?", (doc_name, user_id)).fetchone()
+            db.execute("SELECT expiry_required FROM users_docs WHERE name = %s AND user_id = %s", (doc_name, user_id))
+            ex_req = db.fetchone()
 
-            db.execute("INSERT INTO requirements (set_id, doc_type, is_required, expiry_required) VALUES (?, ?, ?, ?)", (set_id, doc_name, is_required, ex_req['expiry_required']))
+            db.execute("INSERT INTO requirements (set_id, doc_type, is_required, expiry_required) VALUES (%s, %s, %s, %s)", (set_id, doc_name, is_required, ex_req['expiry_required']))
         
         # push collected to db
-        db.commit()
+        con.commit()
 
         flash("Set was updated successfully.")
 
@@ -455,7 +512,8 @@ def edit_set(set_id):
     
     current_set = {}
     
-    this_set = db.execute("SELECT doc_type, is_required FROM requirements WHERE set_id = ?", (set_id,)).fetchall()
+    db.execute("SELECT doc_type, is_required FROM requirements WHERE set_id = %s", (set_id,))
+    this_set = db.fetchall()
     for doc in this_set:
         current_set[doc["doc_type"]] = doc["is_required"]
 
@@ -472,9 +530,12 @@ def projects():
         return redirect("/login")
     
     # call db, get user id
-    db = get_db()
+    con = get_db()
+    db = get_db().cursor()
     user_id = session.get("id")
-    user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
+
+    db.execute("SELECT login FROM admin_users WHERE id = %s", (user_id,))
+    user_name = db.fetchone()
 
     if request.method == "POST":
         
@@ -483,8 +544,8 @@ def projects():
         project_name = request.form.get("project_name")
 
         # add to the db
-        db.execute("INSERT INTO project (project_number, project_name, project_admin_id) VALUES (?, ?, ?)", (project_number, project_name, user_id))
-        db.commit()
+        db.execute("INSERT INTO project (project_number, project_name, project_admin_id) VALUES (%s, %s, %s)", (project_number, project_name, user_id))
+        con.commit()
 
         flash("Project was created successfully.")
 
@@ -492,7 +553,8 @@ def projects():
         return redirect("/projects")
     
     # get existing projects
-    projects = db.execute("SELECT project_number, project_name FROM project WHERE project_admin_id = ?", (user_id,)).fetchall()
+    db.execute("SELECT project_number, project_name FROM project WHERE project_admin_id = %s", (user_id,))
+    projects = db.fetchall()
     
     return render_template("projects.html", projects=projects, user_name=user_name)
 
@@ -505,12 +567,14 @@ def review_submission(token):
     if not session.get("admin"):
         return redirect("/login")
 
-    db = get_db()
+    con = get_db()
+    db = get_db().cursor()
     user_id = session.get("id")
-    user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
+    db.execute("SELECT login FROM admin_users WHERE id = %s", (user_id,))
+    user_name = db.fetchone()
 
     # get required submission info
-    submission = db.execute("""
+    db.execute("""
         SELECT
             project.project_number,
             project.project_name,
@@ -524,8 +588,10 @@ def review_submission(token):
         JOIN project ON requests.project_id = project.id
         JOIN submitting_users ON requests.submitter_id = submitting_users.id
         LEFT JOIN docs ON docs.request_id = requests.id
-        WHERE requests.token = ?
-    """, (token,)).fetchall()
+        WHERE requests.token = %s
+    """, (token,))
+
+    submission = db.fetchall()
 
     if not submission:
         flash("Submission not found.")
@@ -533,10 +599,8 @@ def review_submission(token):
 
     # get list of required doc types
     requirement_set_id = submission[0]["requirement_set_id"]
-    requirements = db.execute(
-        "SELECT doc_type FROM requirements WHERE set_id = ?",
-        (requirement_set_id,)
-    ).fetchall()
+    db.execute("SELECT doc_type FROM requirements WHERE set_id = %s",(requirement_set_id,))
+    requirements = db.fetchall()
 
     # map submitted docs by doc_type for lookup
     submitted_lookup = {
@@ -570,20 +634,19 @@ def review_submission(token):
                 new_comment = request.form.get(f"comment_{doc_id}")
                 if new_status:
                     try:
-                        db.execute("UPDATE docs SET doc_status = ?, comment = ? WHERE id = ?", (new_status, new_comment, doc_id))
+                        db.execute("UPDATE docs SET doc_status = %s, comment = %s WHERE id = %s", (new_status, new_comment, doc_id))
                         updated_doc_ids.append(doc_id)
                     except Exception as e:
                         print(f"Failed to update doc {doc_id}: {e}")
 
-        db.commit()
+        con.commit()
 
         # get request ID for status update
-        request_id = db.execute(
-            "SELECT id FROM requests WHERE token = ?", (token,)
-        ).fetchone()["id"]
+        db.execute("SELECT id FROM requests WHERE token = %s", (token,))
+        request_id = db.fetchone()["id"]
 
         # recalculate overall request status
-        docs = db.execute("""
+        db.execute("""
             SELECT
                 requirements.doc_type,
                 docs.link,
@@ -592,16 +655,21 @@ def review_submission(token):
             FROM requests
             JOIN requirements ON requirements.set_id = requests.requirement_set_id
             LEFT JOIN docs ON docs.request_id = requests.id AND docs.doc_type = requirements.doc_type
-            WHERE requests.id = ?
-        """, (request_id,)).fetchall()
+            WHERE requests.id = %s
+        """, (request_id,))
+
+        docs = db.fetchall()
 
         new_status = get_submission_status(docs)
-        db.execute("UPDATE requests SET status = ? WHERE id = ?", (new_status, request_id))
-        db.commit()
+        db.execute("UPDATE requests SET status = %s WHERE id = %s", (new_status, request_id))
+        con.commit()
 
         # email the submitter
-        request_info = db.execute("SELECT name, submitter_id FROM requests WHERE id = ?", (request_id,)).fetchone()
-        submitter_email = db.execute("SELECT email FROM submitting_users WHERE id = ?", (request_info["submitter_id"],)).fetchone()
+        db.execute("SELECT name, submitter_id FROM requests WHERE id = %s", (request_id,))
+        request_info = db.fetchone()
+
+        db.execute("SELECT email FROM submitting_users WHERE id = %s", (request_info["submitter_id"],))
+        submitter_email = db.fetchone()
 
         subject = f"Status Update: Request {request_info['name']}"
         text_body = f"Your submission {request_info['name']} status was updated to {new_status}."
@@ -635,14 +703,16 @@ def review_submission(token):
 def expiration():
 
     # call db
-    db = get_db()
+    db = get_db().cursor()
 
     # get current user
     user_id = session.get("id")
-    user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
+    db.execute("SELECT login FROM admin_users WHERE id = %s", (user_id,))
+    user_name = db.fetchone()
 
     # get current user docs
-    docs = db.execute("SELECT * FROM docs WHERE admin_user_id = ?", (user_id,)).fetchall()
+    db.execute("SELECT * FROM docs WHERE admin_user_id = %s", (user_id,))
+    docs = db.fetchall()
 
     delta = date.today() + timedelta(days=7)
 
@@ -687,18 +757,20 @@ def expiration():
 @app.route("/delete_sub", methods=['POST'])
 def delete_sub():
     # call db
-    db = get_db()
+    con = get_db()
+    db = get_db().cursor()
     # gets user's token
     admin_id = session.get("id")
     token = request.form.get("token")
-    sub = db.execute("SELECT name, id FROM submitting_users WHERE token = ?", (token,)).fetchone()
+    db.execute("SELECT name, id FROM submitting_users WHERE token = %s", (token,))
+    sub = db.fetchone()
     
 
     # if got, deletes this user from the db
     if token:
         flash(f"Submitter {sub['name']} has been successfully deleted.")
-        db.execute("DELETE FROM admin_submitters WHERE admin_id = ? AND submitter_id = ?", (admin_id, sub["id"]))
-        db.commit()
+        db.execute("DELETE FROM admin_submitters WHERE admin_id = %s AND submitter_id = %s", (admin_id, sub["id"]))
+        con.commit()
         
     return redirect("/my_submitters")
 
@@ -706,10 +778,11 @@ def delete_sub():
 @app.route("/del_doc/<id>", methods=['POST'])
 def del_doc(id):
 
-    db = get_db()
+    con = get_db()
+    db = get_db().cursor()
 
-    db.execute("DELETE FROM users_docs WHERE id = ?", (id,))
-    db.commit()
+    db.execute("DELETE FROM users_docs WHERE id = %s", (id,))
+    con.commit()
 
     return redirect("/documents_library")
 
@@ -719,15 +792,19 @@ def del_doc(id):
 def project_summary(id):
 
 
-    db = get_db()
+    db = get_db().cursor()
     user_id = session.get("id")
-    user = db.execute("SELECT project_admin_id FROM project WHERE id = ?", (id,)).fetchone()
-    user_name = db.execute("SELECT login FROM admin_users WHERE id = ?", (user_id,)).fetchone()
+
+    db.execute("SELECT project_admin_id FROM project WHERE id = %s", (id,))
+    user = db.fetchone()
+
+    db.execute("SELECT login FROM admin_users WHERE id = %s", (user_id,))
+    user_name = db.fetchone()
 
     if not user or session.get("id") != user["project_admin_id"]:
         return redirect("/login")
     
-    submissions = db.execute(
+    db.execute(
         """
     SELECT
     project.project_name,
@@ -740,8 +817,10 @@ def project_summary(id):
     FROM requests
     JOIN project ON project.id = requests.project_id
     JOIN submitting_users ON submitting_users.id = requests.submitter_id
-    WHERE project.id = ?
-    """, (id)).fetchall()
+    WHERE project.id = %s
+    """, (id))
+
+    submissions = db.fetchall()
 
 
     return render_template("project_summary.html", submissions=submissions, user_name=user_name)
@@ -756,8 +835,10 @@ def project_summary(id):
 @app.route("/submitter_registration/<token>", methods=["GET", "POST"])
 def submitter_registration(token):
 
-    db = get_db()
-    submitter = db.execute("SELECT * FROM submitting_users WHERE token = ?", (token,)).fetchone()
+    con = get_db()
+    db = get_db().cursor()
+    db.execute("SELECT * FROM submitting_users WHERE token = %s", (token,))
+    submitter = db.fetchone()
 
     if request.method == "POST":
 
@@ -778,8 +859,8 @@ def submitter_registration(token):
                 
 
             # create new user in db
-                db.execute("UPDATE submitting_users SET login = ?, password = ?, name = ?, description = ?, email = ?, phone = ?, address = ? WHERE token = ?", (login, hashed_password, company_name, description, email, phone, address, token))
-                db.commit()
+                db.execute("UPDATE submitting_users SET login = %s, password = %s, name = %s, description = %s, email = %s, phone = %s, address = %s WHERE token = %s", (login, hashed_password, company_name, description, email, phone, address, token))
+                con.commit()
 
                 # sands back to login
                 return redirect("/submitter_login")
@@ -793,7 +874,8 @@ def submitter_registration(token):
 def submitter_login():
 
     # calls db
-    db = get_db()
+
+    db = get_db().cursor()
 
     if request.method == "POST":
         
@@ -801,7 +883,8 @@ def submitter_login():
         login = request.form.get("login")
         password = request.form.get("password")
 
-        user = db.execute("SELECT * FROM submitting_users WHERE login = ?", (login,)).fetchone()
+        db.execute("SELECT * FROM submitting_users WHERE login = %s", (login,))
+        user = db.fetchone()
 
         if user and check_password_hash(user["password"], password):
 
@@ -833,9 +916,11 @@ def submitter_dashboard():
         return redirect("/login")
 
     # db call, gets admin's id
-    db = get_db()
+    db = get_db().cursor()
     submitter_id = session.get("id")
-    sub_user = db.execute("SELECT * FROM submitting_users WHERE id = ?", (submitter_id,)).fetchone()
+
+    db.execute("SELECT * FROM submitting_users WHERE id = %s", (submitter_id,))
+    sub_user = db.fetchone()
     
 
     # redirect if not logged in
@@ -843,10 +928,11 @@ def submitter_dashboard():
         return redirect("/submitter_login")
 
     # get submitter
-    submitter = db.execute("SELECT * FROM submitting_users WHERE id = ?", (submitter_id,)).fetchone()
+    db.execute("SELECT * FROM submitting_users WHERE id = %s", (submitter_id,))
+    submitter = db.fetchone()
 
     # get information about request to display
-    sub_requests = db.execute("""
+    db.execute("""
     SELECT 
         requests.project_id,
         requests.admin_id,
@@ -858,8 +944,10 @@ def submitter_dashboard():
     FROM requests
     JOIN admin_users ON requests.admin_id = admin_users.id
     JOIN project ON requests.project_id = project.id
-    WHERE requests.submitter_id = ?
-""", (submitter_id,)).fetchall()
+    WHERE requests.submitter_id = %s
+""", (submitter_id,))
+    
+    sub_requests = db.fetchall()
 
     return render_template("submitter_dashboard.html", submitter=submitter, sub_requests=sub_requests, sub_user=sub_user)
 
@@ -869,24 +957,32 @@ def submitter_dashboard():
 @app.route("/submission/<token>", methods=['GET', 'POST'])
 def submission(token):
 
+    
     # call db
-    db = get_db()
+    con = get_db()
+    db = get_db().cursor()
 
     submitter_id = session.get("id")
-    sub_user = db.execute("SELECT * FROM submitting_users WHERE id = ?", (submitter_id,)).fetchone()
+    
+    db.execute("SELECT * FROM submitting_users WHERE id = %s", (submitter_id,))
+    sub_user = db.fetchone()
 
     # get data of the request
-    doc_request = db.execute("SELECT * FROM requests WHERE token = ?", (token,)).fetchone()
+    db.execute("SELECT * FROM requests WHERE token = %s", (token,))
+    doc_request = db.fetchone()
 
     # get project name to display
-    project_name = db.execute("SELECT project_name FROM project WHERE id = ?", (doc_request["project_id"],)).fetchone()
+    db.execute("SELECT project_name FROM project WHERE id = %s", (doc_request["project_id"],))
+    project_name = db.fetchone()
 
     # check in case token is not valid
     if not doc_request:
         return "Invalid token", 404
-    
-     # get all required docs for this user
-    required_docs = db.execute("SELECT * FROM requirements WHERE set_id = ?", (doc_request["requirement_set_id"],)).fetchall()
+
+    # get all required docs for this user
+    db.execute("SELECT * FROM requirements WHERE set_id = %s", (doc_request["requirement_set_id"],))
+    required_docs = db.fetchall()
+
     
     # if user submits the form
     if request.method == "POST":
@@ -914,24 +1010,29 @@ def submission(token):
                 file.save(filepath)
 
                 # gets doc revision
-                revision = db.execute("SELECT revision FROM docs WHERE request_id = ? and doc_type = ?", (doc_request['id'], doc_type)).fetchone()
+                db.execute("SELECT revision FROM docs WHERE request_id = %s and doc_type = %s", (doc_request['id'], doc_type))
+                revision = db.fetchone()
                 
                 if revision:
                     rev = revision["revision"] + 1
                     # cleans up old doc submission in case re-submission is required
-                    db.execute("DELETE FROM docs WHERE request_id = ? AND doc_type = ?", (doc_request["id"], doc_type))
+                    db.execute("DELETE FROM docs WHERE request_id = %s AND doc_type = %s", (doc_request["id"], doc_type))
 
                 else:
                     rev = 0
 
                 # adds information about this submission to db
-                db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation, doc_type, request_id, admin_user_id, doc_status, filepath, revision, expiry_required) VALUES (?, ?, datetime('now'), ?, 'pending', ?, ?, ?, ?, ?, ?, ?)", (session['id'], filepath, expiry, doc_type, doc_request["id"], doc_request["admin_id"], "pending_review", filepath, rev, doc["expiry_required"]))
+                db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation, doc_type, request_id, admin_user_id, doc_status, filepath, revision, expiry_required) VALUES (%s, %s, datetime('now'), %s, 'pending', %s, %s, %s, %s, %s, %s, %s)", (session['id'], filepath, expiry, doc_type, doc_request["id"], doc_request["admin_id"], "pending_review", filepath, rev, doc["expiry_required"]))
 
-        db.commit()
+        con.commit()
 
         # email to admin
-        sub = db.execute("SELECT name FROM submitting_users WHERE id = ?", (session.get('id'),)).fetchone()
-        admin = db.execute("SELECT * FROM admin_users WHERE id = ?", (doc_request['admin_id'],)).fetchone()
+        db.execute("SELECT name FROM submitting_users WHERE id = %s", (session.get('id'),))
+        sub = db.fetchone()
+
+        db.execute("SELECT * FROM admin_users WHERE id = %s", (doc_request['admin_id'],))
+        admin = db.fetchone()
+
 
 
         subject = f"Documents submitted: Request {doc_request['name']} for {project_name['project_name']}"
@@ -958,7 +1059,8 @@ def submission(token):
 
 
     # get submitted docs for this request
-    submitted_docs = db.execute("SELECT * FROM docs WHERE request_id = ?", (doc_request["id"],)).fetchall()
+    db.execute("SELECT * FROM docs WHERE request_id = %s", (doc_request["id"],))
+    submitted_docs = db.fetchall()
 
     # turn into dict by doc_type
     submitted_lookup = {doc["doc_type"]: dict(doc) for doc in submitted_docs}
@@ -997,10 +1099,12 @@ def submission(token):
 @app.route("/delete_doc/<doc_id>", methods=['POST'])
 def delete_doc(doc_id):
 
-    db = get_db()
+    con = get_db()
+    db = get_db().cursor()
 
     # get's id of the submitter that uploaded the file
-    doc = db.execute("SELECT id, submitting_user_id, filepath FROM docs WHERE id = ?", (doc_id,)).fetchone()
+    db.execute("SELECT id, submitting_user_id, filepath FROM docs WHERE id = %s", (doc_id,))
+    doc = db.fetchone()
 
     # checks against currect session id and block unauthorized attempts
     if not session.get("id") or session.get("id") != doc["submitting_user_id"]:
@@ -1008,17 +1112,18 @@ def delete_doc(doc_id):
     
     else:
         # get token of the submission of the file that is beigh deleted
-        token = db.execute("""
-                        SELECT
-                            requests.token
-                            FROM requests
-                            JOIN docs ON docs.request_id = requests.id
-                            WHERE docs.id = ?
-                            """, (doc_id,)).fetchone()
         
+        db.execute("""
+        SELECT requests.token
+        FROM requests
+        JOIN docs ON docs.request_id = requests.id
+        WHERE docs.id = %s
+        """, (doc_id,))
+        token = db.fetchone()
+
 
         # adds record of the deleted file to the db
-        db.execute("INSERT INTO deleted_docs (original_doc_id, submitter_id, filepath) VALUES (?, ?, ?)", (doc["id"], doc["submitting_user_id"], doc["filepath"]))
+        db.execute("INSERT INTO deleted_docs (original_doc_id, submitter_id, filepath) VALUES (%s, %s, %s)", (doc["id"], doc["submitting_user_id"], doc["filepath"]))
 
         # deletes actual file
         if doc and doc["filepath"]:
@@ -1029,8 +1134,8 @@ def delete_doc(doc_id):
 
 
         # removes file from docs
-        db.execute("DELETE FROM docs WHERE id = ?", (doc_id,))
-        db.commit()
+        db.execute("DELETE FROM docs WHERE id = %s", (doc_id,))
+        con.commit()
 
         flash("Document deleted successfully.")
 
@@ -1043,14 +1148,19 @@ def delete_doc(doc_id):
 def company_information():
 
     # connect db
-    db = get_db()
+    con = get_db()
+    db = get_db().cursor()
 
     
 
     # get current user id
     user_id = session.get("id")
-    admin_user = db.execute("SELECT * FROM admin_users WHERE id = ?", (user_id,)).fetchone()
-    sub_user = db.execute("SELECT * FROM submitting_users WHERE id = ?", (user_id,)).fetchone()
+    db.execute("SELECT * FROM admin_users WHERE id = %s", (user_id,))
+    admin_user = db.fetchone()
+
+    db.execute("SELECT * FROM submitting_users WHERE id = %s", (user_id,))
+    sub_user = db.fetchone()
+
 
     if admin_user:
         user = admin_user
@@ -1075,9 +1185,9 @@ def company_information():
         phone = request.form.get("phone")
 
         # inserts into db
-        db.execute("UPDATE admin_users SET name = ?, description = ?, email = ?, address = ?, phone = ? WHERE token = ?", (name, description, email, address, phone, user['token']))
-        db.execute("UPDATE submitting_users SET name = ?, description = ?, email = ?, address = ?, phone = ? WHERE token = ?", (name, description, email, address, phone, user['token']))
-        db.commit()
+        db.execute("UPDATE admin_users SET name = %s, description = %s, email = %s, address = %s, phone = %s WHERE token = %s", (name, description, email, address, phone, user['token']))
+        db.execute("UPDATE submitting_users SET name = %s, description = %s, email = %s, address = %s, phone = %s WHERE token = %s", (name, description, email, address, phone, user['token']))
+        con.commit()
         flash("Information successfully updated.")
 
     if role == "admin":
@@ -1094,11 +1204,12 @@ def company_information():
 
 def expiry_notification():
 
-    db = get_db()
+    con = get_db()
+    db = get_db().cursor()
 
     today = date.today()
 
-    docs = db.execute("""
+    db.execute("""
         SELECT
             docs.id,
             docs.doc_type,
@@ -1115,6 +1226,8 @@ def expiry_notification():
             JOIN submitting_users ON submitting_users.id = docs.submitting_user_id
             JOIN requests ON requests.id = docs.request_id
         """)
+    
+    docs = db.fetchall()
     
     for doc in docs:
 
@@ -1177,7 +1290,7 @@ def expiry_notification():
             send_email(doc['sub_email'], subject, text_body, html_body, email_password)
 
             # updates expiring doc status to action required
-            db.execute("UPDATE docs SET doc_status = ? WHERE id = ?", ('action_required', doc['id']))
+            db.execute("UPDATE docs SET doc_status = %s WHERE id = %s", ('action_required', doc['id']))
 
 
             # recalculate overall request status
@@ -1190,14 +1303,14 @@ def expiry_notification():
                 FROM requests
                 JOIN requirements ON requirements.set_id = requests.requirement_set_id
                 LEFT JOIN docs ON docs.request_id = requests.id AND docs.doc_type = requirements.doc_type
-                WHERE requests.id = ?
+                WHERE requests.id = %s
             """, (doc['req_id'],)).fetchall()
 
             # gets full request status and updates it
             submission_status = get_submission_status(docs)
 
-            db.execute("UPDATE requests SET status = ? WHERE id = ?", (submission_status, doc['req_id']))
-            db.commit()
+            db.execute("UPDATE requests SET status = %s WHERE id = %s", (submission_status, doc['req_id']))
+            con.commit()
 
         
         elif expiry == today:
@@ -1253,7 +1366,7 @@ def expiry_notification():
 @app.route("/admin_sub/")
 def admin_sub():
 
-    db = get_db()
+    db = get_db().cursor()
 
     # checking who is logged
 
@@ -1261,10 +1374,11 @@ def admin_sub():
 
     if session.get("admin") == True:
 
-        token = db.execute("SELECT token FROM admin_users WHERE id = ?", (user_id,)).fetchone()
-        sub = db.execute("SELECT * FROM submitting_users WHERE token = ?", (token["token"],)).fetchone()
-        print(token["token"])
-        print(token)
+        db.execute("SELECT token FROM admin_users WHERE id = %s", (user_id,))
+        token = db.fetchone()
+
+        db.execute("SELECT * FROM submitting_users WHERE token = %s", (token["token"],))
+        sub = db.fetchone()
 
         if sub:
             session.clear()
@@ -1275,9 +1389,12 @@ def admin_sub():
             return redirect("/login")
 
     elif session.get("submitter") == True:
-        token = db.execute("SELECT token FROM submitting_users WHERE id = ?", (user_id,)).fetchone()
-        admin = db.execute("SELECT * FROM admin_users WHERE token = ?", (token["token"],)).fetchone()
-        print(token)
+        db.execute("SELECT token FROM submitting_users WHERE id = %s", (user_id,))
+        token = db.fetchone()
+
+        db.execute("SELECT * FROM admin_users WHERE token = %s", (token["token"],))
+        admin = db.fetchone()
+
         if admin:
             session.clear()
             session["admin"] = True

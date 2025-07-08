@@ -1022,7 +1022,7 @@ def submission(token):
                     rev = 0
 
                 # adds information about this submission to db
-                db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation, doc_type, request_id, admin_user_id, doc_status, filepath, revision, expiry_required) VALUES (%s, %s, datetime('now'), %s, 'pending', %s, %s, %s, %s, %s, %s, %s)", (session['id'], filepath, expiry, doc_type, doc_request["id"], doc_request["admin_id"], "pending_review", filepath, rev, doc["expiry_required"]))
+                db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation , doc_type, request_id, admin_user_id, doc_status, filepath, revision, expiry_required) VALUES (%s, %s, %s, %s, 'pending', %s, %s, %s, %s, %s, %s, %s)", (session['id'], filepath, datetime.now(), expiry, doc_type, doc_request["id"], doc_request["admin_id"], "pending_review", filepath, rev, doc["expiry_required"]))
 
         con.commit()
 

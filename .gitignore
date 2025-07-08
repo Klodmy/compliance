@@ -16,3 +16,6 @@ test.py
 
 # Ignore uploads
 uploads
+
+# ignore init_db file
+init_db.py

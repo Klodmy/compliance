@@ -3,7 +3,6 @@
 {% block title %}Requirement Sets{% endblock %}
 
 {% block content %}
-    <h1>My Requirement Sets</h1>
 
     {% with messages = get_flashed_messages() %}
     {% if messages %}
@@ -17,6 +16,7 @@
 
     <!-- Form to create a new set -->
     <form method="post">
+        <h2>Create a Set</h2>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div>
             <input type="text" name="new_set_name" placeholder="New set name" autocomplete="off" required>
@@ -24,30 +24,41 @@
         <button type="submit">Create Set</button>
     </form>
 
-    <hr>
-    <h2>Your Sets</h2>
-    <!-- Display existing sets -->
+    <h2>Existing Sets</h2>
+
     {% if doc_sets %}
-        {% for set in doc_sets|reverse %}
-            <div style="margin-bottom: 20px;">
-                <h3>{{ set.name }}</h3>
-
-                <p><strong>Required Documents:</strong></p>
-                <ul>
-                    {% for doc in docs_by_set[set.id] %}
-                        <li>{{ doc.doc_type }}</li>
-                    {% else %}
-                        <li><em>No documents assigned yet</em></li>
-                    {% endfor %}
-                </ul>
-
-                <!-- Link to edit the set -->
-                <a href="{{ url_for('edit_set', set_id=set.id) }}">
-                    <button type="button">Edit</button>
-                </a>
-            </div>
-            <hr>
-        {% endfor %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Set Name</th>
+                    <th>Required Documents</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for set in doc_sets|reverse %}
+                <tr>
+                    <td>{{ set.name }}</td>
+                    <td>
+                        {% if docs_by_set[set.id] %}
+                            <ul>
+                                {% for doc in docs_by_set[set.id] %}
+                                    <li>{{ doc.doc_type }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <em>No documents assigned yet</em>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('edit_set', set_id=set.id) }}">
+                            <button type="button">Edit</button>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     {% else %}
         <p>No sets yet.</p>
     {% endif %}

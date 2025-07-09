@@ -24,7 +24,7 @@ header {
     width: 100%;
     display: flex;
     align-items: center;
-    background-color: #3c5cde;
+    background-color: #3c4567;
     padding: 10px 20px;
     z-index: 1000;
 }
@@ -46,9 +46,19 @@ header a:hover {
 footer {
     text-align: center;
     padding: 1rem;
-    background-color: #3c5cde;
-    color: #333;
+    background-color: #373c50;
     margin-top: auto;
+    
+}
+
+footer a, footer p {
+    text-decoration: none;
+    color: #dfe4e8;
+    margin-right: 15px;
+}
+
+footer a:hover {
+    color: #b6b6b6;
 }
 
 .layout {
@@ -107,7 +117,7 @@ h1, h2, h3 {
 /* ----------------- Forms ----------------- */
 form {
     width: 100%;
-    
+    margin-top: 10px;
     padding: 30px;
     background-color: #fdfdfd;
     border-radius: 8px;
@@ -146,7 +156,7 @@ textarea {
 }
 
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 10px;
 }
 
 /* Forms inside flex container (like registration) */
@@ -203,7 +213,7 @@ textarea {
 /* ----------------- Buttons ----------------- */
 button, .styled-button {
     padding: 10px 16px;
-    background-color: #3c5cde;
+    background-color: #3c4567;
     color: white;
     border: none;
     border-radius: 4px;
@@ -214,7 +224,7 @@ button, .styled-button {
 }
 
 button:hover, .styled-button:hover {
-    background-color: #0056b3;
+    background-color: #3c4567;
 }
 
 /* ----------------- Tables ----------------- */
@@ -238,7 +248,7 @@ table {
 }
 
 th {
-    background-color: #3c5cde;
+    background-color: #3c4567;
     color: white;
     padding: 12px 15px;
     text-align: left;
@@ -265,6 +275,11 @@ tr:hover {
     background-color: #f0f8ff;
     border: 1px solid #cce5ff;
     border-radius: 5px;
+}
+
+textarea::placeholder{
+    font-family: inherit;
+    font-size: inherit;
 }
 
 /* ----------------- Document block ----------------- */

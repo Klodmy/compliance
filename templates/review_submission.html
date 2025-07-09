@@ -3,7 +3,7 @@
 {% block title %}Review Submission{% endblock %}
 
 {% block content %}
-    <h1>Review Submission</h1>
+    
 
     {% with messages = get_flashed_messages() %}
         {% if messages %}
@@ -16,6 +16,7 @@
     {% endwith %}
 
     <form method="POST">
+        <h2>Review Submission</h2>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         {% for doc in docs %}
             <div class="doc-section">

@@ -4,18 +4,18 @@
 
 {% block content %}
 
-    <h1>Add a New Submitter</h1>
 
     <form method="POST">
+        <h2>Create a Submitter</h2>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div>
-            <input type="text" name="name" placeholder="Submitter Name" autocomplete="off" required>
-            <input type="email" name="email" placeholder="Submitter Email" required>
+            <input type="text" name="name" placeholder="Name..." autocomplete="off" required><br>
+            <input type="email" name="email" placeholder="Email..." required>
         </div>
         <button type="submit">Add Submitter</button>
     </form>
 
-    <h2>Your Submitters</h2>
+    <h2>Existing Submitters</h2>
 
     {% with messages = get_flashed_messages() %}
       {% if messages %}

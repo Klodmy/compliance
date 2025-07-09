@@ -3,7 +3,7 @@
 {% block title %}Documents Library{% endblock %}
 
 {% block content %}
-<h1>Documents Library</h1>
+
 
     {% with messages = get_flashed_messages() %}
     {% if messages %}
@@ -16,6 +16,7 @@
     {% endwith %}
 
     <form method="POST">
+        <h2>Create a Document</h2>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div>
             <input type="text" name="doc_name" placeholder="Document Name" autocomplete="off" required>
@@ -31,7 +32,7 @@
         <button type="submit">Add Document</button>
     </form>
 
-    <h2>Your Documents</h2>
+    <h2>Documents Library</h2>
 
     {% if docs %}
     <table>

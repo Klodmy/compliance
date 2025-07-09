@@ -16,28 +16,34 @@
     {% endwith %}
 
     <form method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <p>Select the documents required for this set:</p>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <p>Select the documents required for this set:</p>
 
-        {% for doc in all_docs %}
-            <div style="margin-bottom: 10px;">
-                <label>
-                    <input type="checkbox" name="{{ doc.name }}" {% if doc.name in current_set %}checked{% endif %}>
-                    {{ doc.name }}
-                </label>
-
-                <label style="margin-left: 15px;">
-                        Required?
-                        <input type="checkbox" name="is_required_{{ doc.name }}"
-                               {% if current_set[doc.name] %}checked{% endif %}>
-                </label>
-
-            </div>
-        {% endfor %}
-
-        <br>
-        <button type="submit">Save Changes</button>
+        <table>
+            <thead>
+                <tr>
+                    <th>Document Name</th>
+                    <th>Include in Set</th>
+                    <th>Required?</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in all_docs %}
+                <tr>
+                    <td>{{ doc.name }}</td>
+                    <td>
+                        <input type="checkbox" name="{{ doc.name }}" {% if doc.name in current_set %}checked{% endif %}>
+                    </td>
+                    <td>
+                        <input type="checkbox" name="is_required_{{ doc.name }}" {% if current_set[doc.name] %}checked{% endif %}>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table><br>
+    <button type="submit">Save Changes</button>
     </form>
+
 
     <br>
     <a href="{{ url_for('my_sets') }}">

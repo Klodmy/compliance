@@ -3,7 +3,7 @@
 {% block title %}Projects{% endblock %}
 
 {% block content %}
-    <h1>Projects</h1>
+    
 
     {% with messages = get_flashed_messages() %}
     {% if messages %}
@@ -16,6 +16,7 @@
     {% endwith %}
 
     <form method="POST">
+        <h2>Create a Project</h2>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="text" name="project_number" placeholder="Project Number" autocomplete="off" required>
         <input type="text" name="project_name" placeholder="Project Name" autocomplete="off" required>
@@ -23,16 +24,27 @@
         <button type="submit">Add Project</button>
     </form>
 
-    <h2>Your Projects</h2>
+    <h2>Existing Projects</h2>
 
-    
-
-    <ul>
-        {% for project in projects|reverse %}
-            <li><strong>{{ project.project_number }}</strong>: {{ project.project_name }}</li>
-        {% else %}
-            <p>No projects yet.</p>
-        {% endfor %}
-    </ul>
+    {% if projects %}
+    <table>
+        <thead>
+            <tr>
+                <th>Project Number</th>
+                <th>Project Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for project in projects|reverse %}
+            <tr>
+                <td>{{ project.project_number }}</td>
+                <td>{{ project.project_name }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No projects yet.</p>
+    {% endif %}
 
 {% endblock %}

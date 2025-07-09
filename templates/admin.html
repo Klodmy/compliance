@@ -3,9 +3,10 @@
 {% block title %}Admin Panel{% endblock %}
 
 {% block content %}
-<h2>Request a Submittal</h2>
+
 
 <form method="POST">
+    <h2>Create a Request</h2>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     <div class="form-group">

@@ -168,7 +168,7 @@ def registration():
 #main page
 @app.route("/", methods=['GET', 'POST'])
 def main():
-    return redirect("/login")
+    return render_template("landing.html")
 
 
 

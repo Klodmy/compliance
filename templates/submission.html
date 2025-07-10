@@ -43,11 +43,11 @@
                 {% if not doc["link"] or status == "action_required" %}
                     <div class="upload-area">
                         <label for="{{ doc['doc_type'] }}">Upload New File:</label><br>
-                        <input type="file" name="{{ doc['doc_type'] }}" required><br>
+                        <input type="file" name="{{ doc['doc_type'] }}"><br>
                         
                         {% if doc.expiry_required|default(0)|int == 1 %}
                             <label for="{{ doc['doc_type'] }}_expiry">Expiry Date (Required):</label><br>
-                            <input type="date" name="{{ doc['doc_type'] }}_expiry" required><br>
+                            <input type="date" name="{{ doc['doc_type'] }}_expiry"><br>
                         {% else %}
                             <p></p>
                         {% endif %}

@@ -82,6 +82,7 @@ footer a:hover {
     font-size: large;
     text-decoration: none;
     margin-bottom: 10px;
+    margin-top: 10px;
 }
 
 .sidebar a:hover {
@@ -224,7 +225,7 @@ button, .styled-button {
 }
 
 button:hover, .styled-button:hover {
-    background-color: #3c4567;
+    background-color: #515d87;
 }
 
 /* ----------------- Tables ----------------- */
@@ -341,4 +342,87 @@ textarea::placeholder{
 .locked {
     color: gray;
     font-style: italic;
+}
+
+
+
+/* Landing Page Styles */
+
+.landing-header {
+    display: flex;
+    flex-direction: row;
+    background: #3c4567;
+    color: white;
+    padding: 1rem;
+    text-align: center;
+}
+
+.landing-header p, h1{
+    margin-left: auto;
+    color: rgb(255, 255, 255);
+}
+
+.landing-header img{
+    height: 150px;
+}
+
+.landing-container {
+    display: flex;
+    flex-direction: column;
+    padding: 3%;
+    max-width: 1000px;
+    margin: auto;
+    background: #fff;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    margin-top: 2rem;
+    border-radius: 8px;
+    margin-top: 20%;
+}
+
+.landing-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.landing-container h2 {
+    color: rgb(1, 0, 0);
+}
+
+.landing-container ul {
+    list-style: none;
+    padding-left: 1rem;
+    
+}
+
+.landing-container ul li {
+    padding: 0.5rem 0;
+}
+
+.cta {
+    margin-top: 2rem;
+    text-align: center;
+}
+
+.cta a {
+    background: #3c4567;
+    color: white;
+    padding: 0.8rem 1.5rem;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+.cta a:hover {
+    background: #515d87;
+}
+
+.landing-footer {
+    text-align: center;
+    padding: 1rem;
+    color: #777;
+    font-size: 0.9rem;
+    margin-top: 2rem;
+    background: 3c4567;
 }

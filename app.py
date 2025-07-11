@@ -999,8 +999,14 @@ def submission(token):
             if file and file.filename and ex_check(file.filename, ALLOWED_EXTENSIONS):
 
                 
+                # get provided file name
+                raw_filename = file.filename
+
+                # secure filename
+                sec_filename = secure_filename(raw_filename)
+                
                 # assign file name in readable format
-                filename = f"{session['id']}_{doc_type}_{file.filename}"
+                filename = f"{session['id']}_{doc_type}_{sec_filename}"
                 # join upload folder and new file name
                 filepath = f"{doc_request['admin_id']}/{doc_request['project_id']}/{doc_request['submitter_id']}/"
                 # saves expiry date

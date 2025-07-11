@@ -1,7 +1,7 @@
 from flask import Flask, request, render_template, session, redirect, url_for, flash, g
-import sqlite3
+import boto3
 import uuid
-from utils import ex_check, send_email, get_submission_status
+from utils import ex_check, send_email, get_submission_status, upload_file_to_s3
 import os
 from random import randint
 from dotenv import load_dotenv
@@ -972,7 +972,7 @@ def submission(token):
     doc_request = db.fetchone()
 
     # get project name to display
-    db.execute("SELECT project_name FROM project WHERE id = %s", (doc_request["project_id"],))
+    db.execute("SELECT project_name, id FROM project WHERE id = %s", (doc_request["project_id"],))
     project_name = db.fetchone()
 
     # check in case token is not valid
@@ -998,16 +998,17 @@ def submission(token):
             # checks if there is file, it has name and extension is allowed
             if file and file.filename and ex_check(file.filename, ALLOWED_EXTENSIONS):
 
-                # saves current file name
-                safe_name = secure_filename(file.filename)
+                
                 # assign file name in readable format
-                filename = f"{session['id']}_{doc_type}_{safe_name}"
+                filename = f"{session['id']}_{doc_type}_{file.filename}"
                 # join upload folder and new file name
-                filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+                filepath = f"{doc_request['admin_id']}/{doc_request['project_id']}/{doc_request['submitter_id']}/"
                 # saves expiry date
                 expiry = request.form.get(f"{doc_type}_expiry")
                 # saves the file
-                file.save(filepath)
+                upload_file_to_s3(file, filename, filepath)
+
+                s3_path = upload_file_to_s3
 
                 # gets doc revision
                 db.execute("SELECT revision FROM docs WHERE request_id = %s and doc_type = %s", (doc_request['id'], doc_type))
@@ -1022,7 +1023,7 @@ def submission(token):
                     rev = 0
 
                 # adds information about this submission to db
-                db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation , doc_type, request_id, admin_user_id, doc_status, filepath, revision, expiry_required) VALUES (%s, %s, %s, %s, 'pending', %s, %s, %s, %s, %s, %s, %s)", (session['id'], filepath, datetime.now(), expiry, doc_type, doc_request["id"], doc_request["admin_id"], "pending_review", filepath, rev, doc["expiry_required"]))
+                db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation , doc_type, request_id, admin_user_id, doc_status, filepath, revision, expiry_required) VALUES (%s, %s, %s, %s, 'pending', %s, %s, %s, %s, %s, %s, %s)", (session['id'], s3_path, datetime.now(), expiry, doc_type, doc_request["id"], doc_request["admin_id"], "pending_review", filepath, rev, doc["expiry_required"]))
 
         con.commit()
 

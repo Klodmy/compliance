@@ -16,23 +16,34 @@
     {% endwith %}
 
     <form method="POST">
-        <h2>Review Submission</h2>
+        
+        <div class="rev-submission">
+            <h2>Review Submission:</h2>
+            <a href="{{ url_for('download_submission', request_id=req['request_id']) }}"><strong>Download Submitted Files</strong></a>
+        </div>
+        
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         {% for doc in docs %}
             <div class="doc-section">
                 <p><strong>Document Type:</strong> {{ doc.doc_type }}</p>
                 {% if doc.id and doc.link %}
-                    <p><strong>Current Status:</strong> {{ doc.doc_status.replace('_', ' ').title() }}</p>
-                    <p><a href="{{ doc.link }}" target="_blank">View Document</a></p>
+                    <p><strong>Link:</strong> <a href="{{ url_for('download', doc_id=doc['id']) }}">Download</a></p>
                     <p><strong>Revision:</strong> Rev {{ doc.revision or 0 }}</p>
-                    <label for="status_{{ doc.id }}">Update Status:</label>
-                    <select name="status_{{ doc.id }}" id="status_{{ doc.id }}">
-                        <option value="pending_review" {% if doc.doc_status == "pending_review" %}selected{% endif %}>Pending Review</option>
-                        <option value="approved" {% if doc.doc_status == "approved" %}selected{% endif %}>Approved</option>
-                        <option value="action_required" {% if doc.doc_status == "action_required" %}selected{% endif %}>Action Required</option>
-                    </select>
+                    <p><strong>Current Status:</strong>
+                        <span class="status {{ doc.doc_status|replace('_', '-') }}">
+                            {{ doc.doc_status.replace('_', ' ') }}
+                        </span>
+                    </p>
+                    <div class="status-options">
+                        <label for="status_{{ doc.id }}" style="margin-right: 5px;"><strong>Update Status:</strong></label>
+                        <select name="status_{{ doc.id }}" id="status_{{ doc.id }}">
+                            <option value="pending_review" {% if doc.doc_status == "pending_review" %}selected{% endif %}>Pending Review</option>
+                            <option value="approved" {% if doc.doc_status == "approved" %}selected{% endif %}>Approved</option>
+                            <option value="action_required" {% if doc.doc_status == "action_required" %}selected{% endif %}>Action Required</option>
+                        </select>
+                    </div>
                     <div>
-                        <label for="comment_{{ doc.id }}">Comment:</label><br>
+                        <label for="comment_{{ doc.id }}"><strong>Comment:</strong></label>
                         <textarea name="comment_{{ doc.id }}" rows="2" cols="40" placeholder="Comment...">{{ doc.comment or '' }}</textarea>
                     </div>
                 {% else %}

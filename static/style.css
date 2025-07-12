@@ -284,12 +284,23 @@ textarea::placeholder{
 }
 
 /* ----------------- Document block ----------------- */
-.doc-block {
+.doc-section {
     border: 1px solid #ccc;
     padding: 15px;
     margin-bottom: 15px;
     border-radius: 5px;
     background-color: #fff;
+}
+
+.rev-submission {
+    margin-bottom: 15px;
+}
+
+.status-options {
+    display: flex;
+    flex-direction: row;
+    margin-bottom: 10px;
+    align-items: center;
 }
 
 /* ----------------- Status ----------------- */

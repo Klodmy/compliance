@@ -4,6 +4,7 @@ import os
 import boto3
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
+import posixpath
 
 def main():
 
@@ -79,12 +80,25 @@ BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
 # gets file, name and folders and puts into bucket
 def upload_file_to_s3(file_obj, filename, path_prefix):
 
-    s3_path = f"{path_prefix}/{filename}"
+    s3_path = posixpath.join(path_prefix, filename)
 
     s3.upload_fileobj(file_obj, BUCKET_NAME, s3_path)
 
-    # returns a name to store
     return s3_path
+
+
+# creates presigned link
+
+def generate_presigned_url(s3_path, expiration=3600):
+    return s3.generate_presigned_url(
+        ClientMethod="get_object",
+        Params={
+            "Bucket": BUCKET_NAME,
+            "Key": s3_path
+        }
+    )
+
+
 
 
 if __name__ == "__main__":

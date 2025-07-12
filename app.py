@@ -1,7 +1,7 @@
-from flask import Flask, request, render_template, session, redirect, url_for, flash, g
+from flask import Flask, request, render_template, session, redirect, flash, g, abort, send_file
 import boto3
 import uuid
-from utils import ex_check, send_email, get_submission_status, upload_file_to_s3
+from utils import ex_check, send_email, get_submission_status, upload_file_to_s3, generate_presigned_url
 import os
 from random import randint
 from dotenv import load_dotenv
@@ -13,6 +13,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
 import psycopg2.extras
 from flask_wtf.csrf import CSRFProtect
+import io
+import zipfile
 
 
 ### INITIATON, SETTINGS, CONSTANTS ###
@@ -580,6 +582,7 @@ def review_submission(token):
             project.project_name,
             requests.submitter_id,
             requests.token,
+            requests.id AS request_id,
             requests.status,
             requests.requirement_set_id,
             submitting_users.name AS submitter_name,
@@ -592,6 +595,8 @@ def review_submission(token):
     """, (token,))
 
     submission = db.fetchall()
+
+    req_data = submission[0]
 
     if not submission:
         flash("Submission not found.")
@@ -665,7 +670,7 @@ def review_submission(token):
         con.commit()
 
         # email the submitter
-        db.execute("SELECT name, submitter_id FROM requests WHERE id = %s", (request_id,))
+        db.execute("SELECT name, submitter_id, id FROM requests WHERE id = %s", (request_id,))
         request_info = db.fetchone()
 
         db.execute("SELECT email FROM submitting_users WHERE id = %s", (request_info["submitter_id"],))
@@ -695,7 +700,7 @@ def review_submission(token):
         flash("Review finalized. Submission status updated and email sent.")
         return redirect(f"/review_submission/{token}")
 
-    return render_template("review_submission.html", docs=docs_to_display, token=token, user_name=user_name)
+    return render_template("review_submission.html", docs=docs_to_display, token=token, user_name=user_name, req=req_data)
 
 
 # review expiring docs
@@ -825,6 +830,105 @@ def project_summary(id):
 
     return render_template("project_summary.html", submissions=submissions, user_name=user_name)
 
+
+
+
+@app.route("/download/<int:doc_id>")
+
+def download(doc_id):
+
+    # get current user
+    user_id = session.get("id")
+    
+    # redirects if none
+    if not user_id:
+        return redirect("/login")
+
+    db = get_db().cursor()
+    
+    db.execute("SELECT link, admin_user_id, submitting_user_id FROM docs WHERE id = %s", (doc_id,))
+    doc = db.fetchone()
+
+    if not doc:
+        return "File not found", 404
+
+    if user_id != doc["admin_user_id"] and user_id != doc["submitting_user_id"]:
+        abort(403)
+        
+    
+    s3_key = doc["link"]
+
+    s3 = boto3.client(
+        "s3",
+        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        region_name=os.getenv("AWS_REGION")
+    )
+
+    try:
+        presigned_url = s3.generate_presigned_url(
+            ClientMethod="get_object",
+            Params={
+                "Bucket": os.getenv("S3_BUCKET_NAME"),
+                "Key": s3_key
+            },
+            ExpiresIn=3600  # 1 hour link
+        )
+        return redirect(presigned_url)
+
+    except Exception as e:
+        print("Error generating URL:", e)
+        return "Something went wrong", 500
+    
+@app.route("/download_submission/<int:request_id>")
+def download_submission(request_id):
+
+    user_id = session.get("id")
+    if not user_id:
+        return redirect("/login")
+
+    db = get_db().cursor()
+    db.execute("SELECT * FROM docs WHERE request_id = %s", (request_id,))
+    docs = db.fetchall()
+
+    if not docs:
+        return "No documents found", 404
+
+    # Ensure the user is the admin who owns this request
+    if docs[0]["admin_user_id"] != user_id:
+        abort(403)
+
+    # Set up S3 client
+    s3 = boto3.client(
+        "s3",
+        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        region_name=os.getenv("AWS_REGION")
+    )
+
+    # Create in-memory zip file
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for doc in docs:
+            key = doc["link"]  # this is the path in S3
+            file_obj = io.BytesIO()
+
+            try:
+                s3.download_fileobj(os.getenv("S3_BUCKET_NAME"), key, file_obj)
+                file_obj.seek(0)
+                filename = key.split("/")[-1]
+                zipf.writestr(filename, file_obj.read())
+            except Exception as e:
+                print(f"Error downloading {key}: {e}")
+
+    zip_buffer.seek(0)
+
+    return send_file(
+        zip_buffer,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name=f"submission_{request_id}.zip"
+    )
 
 
 
@@ -1012,9 +1116,9 @@ def submission(token):
                 # saves expiry date
                 expiry = request.form.get(f"{doc_type}_expiry")
                 # saves the file
-                upload_file_to_s3(file, filename, filepath)
+                
 
-                s3_path = upload_file_to_s3
+                s3_path = upload_file_to_s3(file, filename, filepath)
 
                 # gets doc revision
                 db.execute("SELECT revision FROM docs WHERE request_id = %s and doc_type = %s", (doc_request['id'], doc_type))

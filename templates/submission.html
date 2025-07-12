@@ -30,7 +30,7 @@
 
                 {% if doc["link"] %}
                     <div style="margin-top: 5px;">
-                        Current file: <a href="{{ doc['link'] }}" target="_blank">View submitted</a>
+                        Current file: <a href="{{ url_for('download', doc_id=doc['id']) }}">Review Submitted File</a>
                     </div>
                 {% endif %}
 

@@ -1518,6 +1518,20 @@ def admin_sub():
         return redirect("/login")
 
 
+### MISC ###
+
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+
+@app.route("/terms_of_service")
+def service():
+    return render_template("terms_of_service.html")
+
+@app.route("/contact")
+def contact():
+    return render_template("contact.html")
+
 
 
 

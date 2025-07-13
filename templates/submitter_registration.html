@@ -44,6 +44,13 @@
             <br>
             <button type="submit">Register</button>
 
+            <div class="form-checkbox">
+                <input type="checkbox" id="agree" name="agree" required style="margin-right: 10px;">
+                <label for="agree">
+                    I agree to the <a href="{{ url_for('privacy') }}" target="_blank">Privacy Policy</a> and <a href="{{ url_for('service') }}" target="_blank">Terms of Service</a>.
+                </label>
+            </div>
+
        </form>
 
     <br>

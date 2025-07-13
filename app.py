@@ -139,6 +139,9 @@ def registration():
                 flash("This email is already in use.")
             return redirect("/registration")
         
+        if not request.form.get("agree"):
+            return "You must agree to the Privacy Policy and Terms of Service.", 400
+        
 
         # check if all gethered and password confirmed
         if login and password and password2 and email:
@@ -956,6 +959,10 @@ def submitter_registration(token):
         phone = request.form.get("phone")
         address = request.form.get("address")
 
+        if not request.form.get("agree"):
+            return "You must agree to the Privacy Policy and Terms of Service.", 400
+
+
         if login and password and password2 and submitter:
             if password == password2:
                 
@@ -964,6 +971,8 @@ def submitter_registration(token):
 
             # create new user in db
                 db.execute("UPDATE submitting_users SET login = %s, password = %s, name = %s, description = %s, email = %s, phone = %s, address = %s WHERE token = %s", (login, hashed_password, company_name, description, email, phone, address, token))
+                con.commit()
+                db.execute("UPDATE admin_users SET login = %s, password = %s, name = %s, description = %s, email = %s, phone = %s, address = %s WHERE token = %s", (login, hashed_password, company_name, description, email, phone, address, token))
                 con.commit()
 
                 # sands back to login

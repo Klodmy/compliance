@@ -15,6 +15,7 @@ import psycopg2.extras
 from flask_wtf.csrf import CSRFProtect
 import io
 import zipfile
+import json
 
 
 ### INITIATON, SETTINGS, CONSTANTS ###
@@ -245,7 +246,7 @@ def admin():
                     <html>
                         <body style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
                             <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
-                                <h2 style="color: #444;">You have a new submittal request from <span style="color: #007bff;">{company_name}</span></h2>
+                                <h2 style="color: #444;">You have a new submittal request from <span style="color: #007bff;">{company_name['name']}</span></h2>
                                 <p>Please log in to your dashboard to review the request.</p>
                                 <a href="http://127.0.0.1:5000/submitter_registration/{sub_token['token']}"
                                 style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Login to Dashboard</a>
@@ -817,11 +818,11 @@ def project_summary(id):
     SELECT
     project.project_name,
     project.project_number,
-    requests.name,
+    requests.name AS req_name,
     requests.token,
     requests.status,
     requests.submitter_id,
-    submitting_users.name
+    submitting_users.name AS sub_name
     FROM requests
     JOIN project ON project.id = requests.project_id
     JOIN submitting_users ON submitting_users.id = requests.submitter_id
@@ -1540,6 +1541,15 @@ def service():
 @app.route("/contact")
 def contact():
     return render_template("contact.html")
+
+
+@app.route("/debug/admins")
+def debug_admins():
+    db = get_db().cursor()
+    db.execute("SELECT id, name, email FROM admin_users LIMIT 10")
+    admins = db.fetchall()
+
+    return json.dumps(admins, indent=2)
 
 
 

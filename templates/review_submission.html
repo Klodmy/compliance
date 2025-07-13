@@ -18,8 +18,12 @@
     <form method="POST">
         
         <div class="rev-submission">
-            <h2>Review Submission:</h2>
-            <a href="{{ url_for('download_submission', request_id=req['request_id']) }}"><strong>Download Submitted Files</strong></a>
+            <h2>Review Submission</h2>
+            {% if req and req.request_id %}
+                <a href="{{ url_for('download_submission', request_id=req['request_id']) | default('Submission Is Not Completed.')}}"><strong>Download Submitted Files</strong></a>
+            {% else %}
+                <p>No Uploaded Files Yet.</p>
+            {% endif %}
         </div>
         
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

@@ -18,8 +18,8 @@
             <tbody>
                 {% for sub in submissions %}
                     <tr>
-                        <td>{{ sub.name }}</td>
-                        <td>{{ sub['submitting_users.name'] }}</td>
+                        <td>{{ sub.req_name }}</td>
+                        <td>{{ sub.sub_name }}</td>
                         <td class="status {{ sub.status|replace(' ', '-') }}">{{ sub.status.replace('_', ' ').title() }}</td>
                         <td><a href="{{ url_for('review_submission', token=sub.token) }}">Review</a></td>
                     </tr>

@@ -127,8 +127,13 @@ form {
 
 .form-checkbox {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     margin-top: 20px;
+}
+
+.tos-check {
+    display: flex;
+    flex-direction: row;
 }
 
 label {

@@ -1305,6 +1305,12 @@ def company_information():
         address = request.form.get("address")
         phone = request.form.get("phone")
 
+        db.execute("SELECT * FROM admin_users WHERE email = %s OR phone = %s", (email, phone))
+        existing = db.fetchall()
+
+        if existing:
+            return "This email or number is already in use.", 404
+
         # inserts into db
         db.execute("UPDATE admin_users SET name = %s, description = %s, email = %s, address = %s, phone = %s WHERE token = %s", (name, description, email, address, phone, user['token']))
         db.execute("UPDATE submitting_users SET name = %s, description = %s, email = %s, address = %s, phone = %s WHERE token = %s", (name, description, email, address, phone, user['token']))

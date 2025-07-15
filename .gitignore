@@ -1,21 +1,31 @@
 # Ignore virtual environment
 venv/
 
-# Ignore compiled files
+# Ignore compiled Python files
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 
-# Ignore database
+# Ignore local SQLite database
 *.db
 
-# Ignore env file 
+# Ignore environment files
 .env
+.env.*
 
-# Ignor file for tests
+# Ignore test files
 test.py
+tests/
 
-# Ignore uploads
-uploads
+# Ignore file uploads (optional, if you store user uploads locally)
+uploads/
+*.zip
 
-# ignore init_db file
+# Ignore init script
 init_db.py
+
+# Ignore IDE/editor configs (optional but useful)
+.vscode/
+.idea/
+*.swp
+.DS_Store

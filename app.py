@@ -718,37 +718,36 @@ def expiration():
     user_id = session.get("id")
     db.execute("SELECT login FROM admin_users WHERE id = %s", (user_id,))
     user_name = db.fetchone()
+    
 
     # get current user docs
     db.execute("SELECT * FROM docs WHERE admin_user_id = %s", (user_id,))
     docs = db.fetchall()
+    
 
-    delta = date.today() + timedelta(days=7)
+    delta = datetime.today() + timedelta(days=7)
 
     # list for expiring/ed docs
     expiring = []
 
     for doc in docs:
         
-        # trying to format datestamp to yyyy-mm-dd format
         try:
-            expiry = datetime.strptime(doc["expiry_date"], "%Y-%m-%d").date()
-            
             # if doc will expire in 7 or less days, or already has been expired
-            if expiry <= delta:
+            if doc["expiry_date"] <= delta:
                 # adding to the list
                 expiring.append(doc)
-
             # skip if not expiring
             else:
-                pass
-        # print errors
-        except Exception as e:         
+                print("1")
+                #pass
+                
+        except Exception:
             pass
-            
-    
+        
+        
     # sorts the list by expiry date, putting closest/oldest first
-    expiring.sort(key=lambda doc: datetime.strptime(doc["expiry_date"], "%Y-%m-%d").date())
+    expiring.sort(key=lambda doc: doc["expiry_date"])
                 
     return render_template("expiration.html", expiring=expiring, user_name=user_name)
 
@@ -1143,7 +1142,7 @@ def submission(token):
                     rev = 0
 
                 # adds information about this submission to db
-                db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation , doc_type, request_id, admin_user_id, doc_status, filepath, revision, expiry_required) VALUES (%s, %s, %s, %s, 'pending', %s, %s, %s, %s, %s, %s, %s)", (session['id'], s3_path, datetime.now(), expiry, doc_type, doc_request["id"], doc_request["admin_id"], "pending_review", filepath, rev, doc["expiry_required"]))
+                db.execute("INSERT INTO docs (submitting_user_id, link, date_submitted, expiry_date, confirmation , doc_type, request_id, admin_user_id, doc_status, filepath, revision, expiry_required) VALUES (%s, %s, %s, %s, 'pending', %s, %s, %s, %s, %s, %s, %s)", (session['id'], s3_path, date.today(), expiry, doc_type, doc_request["id"], doc_request["admin_id"], "pending_review", filepath, rev, doc["expiry_required"]))
 
         con.commit()
 

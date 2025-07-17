@@ -38,6 +38,11 @@
                             {{ doc.doc_status.replace('_', ' ') }}
                         </span>
                     </p>
+                    {% if doc.expiry_date %}
+                        <p><strong>Expiry date:</strong> {{ doc.expiry_date.strftime("%Y-%m-%d:")[:10] }}</p>
+                    {% else %}
+                        <p></p>
+                    {% endif %}
                     <div class="status-options">
                         <label for="status_{{ doc.id }}" style="margin-right: 5px;"><strong>Update Status:</strong></label>
                         <select name="status_{{ doc.id }}" id="status_{{ doc.id }}">

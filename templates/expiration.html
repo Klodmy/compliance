@@ -17,7 +17,7 @@
             {% for doc in expiring %}
             <tr>
                 <td>{{ doc["doc_type"] }}</td>
-                <td>{{ doc["expiry_date"] }}</td>
+                <td>{{ doc.expiry_date.strftime("%Y-%m-%d:")[:10] }}</td>
             </tr>
             {% endfor %}
         </tbody>

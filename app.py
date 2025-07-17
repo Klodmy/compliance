@@ -238,7 +238,7 @@ def admin():
 
 
                 # body of the email in case reveiving browser does not render html
-                body = f"You have a submittal request from {user_name['login']}. Please follow the following link to login: http://127.0.0.1:5000/submitter_login"
+                body = f"You have a submittal request from {user_name['login']}. Please follow the following link to login: http://concomply.com/submitter_login"
 
                 # html body of the email
                 html_body = (
@@ -248,7 +248,7 @@ def admin():
                             <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
                                 <h2 style="color: #444;">You have a new submittal request from <span style="color: #007bff;">{company_name['name']}</span></h2>
                                 <p>Please log in to your dashboard to review the request.</p>
-                                <a href="http://127.0.0.1:5000/submitter_registration/{sub_token['token']}"
+                                <a href="http://concomply.com/submitter_registration/{sub_token['token']}"
                                 style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Login to Dashboard</a>
                             </div>
                         </body>
@@ -690,7 +690,7 @@ def review_submission(token):
                         <h2>Status Update</h2>
                         <p>The status of your submission <strong>{request_info['name']}</strong> has been updated to <strong>{new_status.replace("_", " ").title()}</strong>.</p>
                         <p>Please log in to your dashboard to view the details.</p>
-                        <a href="http://127.0.0.1:5000/submitter_login"
+                        <a href="http://concomply.com/submitter_login"
                             style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
                             Go to Dashboard
                         </a>
@@ -1166,7 +1166,7 @@ def submission(token):
                         <h2>Submission Completed</h2>
                         <p>Submission <strong>{doc_request['name']}</strong> for the project <strong>{project_name['project_name']}</strong> has been completed by <strong>{sub['name']}.</strong> </p>
                         <p>Please log in to your dashboard to view the details.</p>
-                        <a href="http://127.0.0.1:5000/login"
+                        <a href="http://concomply.com/login"
                             style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
                             Go to Dashboard
                         </a>
@@ -1382,7 +1382,7 @@ def expiry_notification():
                             <h2>Document is about to expire.</h2>
                             <p>Document <strong>{doc['doc_type']}</strong> submitted by <strong>{doc['sub_name']}</strong> for <strong>{doc['request_name']}</strong> is about to expire.</p>
                             <p>Please log in to your dashboard to view the details.</p>
-                            <a href="http://127.0.0.1:5000/login"
+                            <a href="http://concomply.com/login"
                                 style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
                                 Go to Dashboard
                             </a>
@@ -1405,7 +1405,7 @@ def expiry_notification():
                             <h2>Document is about to expire.</h2>
                             <p>Document <strong>{doc['doc_type']}</strong> submitted to <strong>{doc['admin_name']}</strong> for <strong>{doc['request_name']}</strong> is about to expire.</p>
                             <p>Please log in to your dashboard to view the details.</p>
-                            <a href="http://127.0.0.1:5000/submitter_login"
+                            <a href="http://concomply.com/submitter_login"
                                 style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
                                 Go to Dashboard
                             </a>
@@ -1454,7 +1454,7 @@ def expiry_notification():
                             <h2>Document is about to expire.</h2>
                             <p>Document <strong>{doc['doc_type']}</strong> submitted by <strong>{doc['sub_name']}</strong> for <strong>{doc['request_name']}</strong> has expired.</p>
                             <p>Please log in to your dashboard to view the details.</p>
-                            <a href="http://127.0.0.1:5000/login"
+                            <a href="http://concomply.com/login"
                                 style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
                                 Go to Dashboard
                             </a>
@@ -1474,7 +1474,7 @@ def expiry_notification():
                             <h2>Document is about to expire.</h2>
                             <p>Document <strong>{doc['doc_type']}</strong> submitted to <strong>{doc['admin_name']}</strong> for <strong>{doc['request_name']}</strong> has expired.</p>
                             <p>Please log in to your dashboard to view the details.</p>
-                            <a href="http://127.0.0.1:5000/submitter_login"
+                            <a href="http://concomply.com/submitter_login"
                                 style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
                                 Go to Dashboard
                             </a>

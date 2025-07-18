@@ -197,7 +197,9 @@ def admin():
 
 
         if request.form.get("delete"):
-            db.execute("DELETE FROM requests WHERE id = %s", (request.form.get("delete"),))
+            del_id = request.form.get("delete")
+            db.execute("DELETE FROM docs WHERE request_id = %s", (del_id,))
+            db.execute("DELETE FROM requests WHERE id = %s", (del_id,))
             con.commit()
             flash("Request deleted.")
             return redirect("/admin")
